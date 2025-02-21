@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';  // Importa useNavigate
 import '../css/UserManagement.css';
 import Navbar from './Navbar';
 
@@ -11,12 +12,21 @@ const UserManagement = () => {
     { id: 5, lastLogin: '02/02/2022', name: 'Frank Herbert', active: false },
   ]);
 
+  const navigate = useNavigate();  // Hook para navegar entre rutas
+
+
   const toggleStatus = (userId) => {
     setUsers(users.map(user => 
       user.id === userId ? { ...user, active: !user.active } : user
     ));
   };
 
+  const handleAddUser = () => {
+    navigate('/usuarioRegistro');  // Redirige a la página de registro
+  };
+
+
+ 
   return (
     <div><Navbar/> 
     <div className="user-management">
@@ -27,7 +37,7 @@ const UserManagement = () => {
           <input type="text" placeholder="Buscar Usuario" />
           <button className="search-button">🔍</button>
         </div>
-        <button className="add-button">+ Agregar Usuario</button>
+        <button className="add-button" onClick={handleAddUser}>+ Agregar Usuario</button>
       </div>
 
       <div className="table-container">
