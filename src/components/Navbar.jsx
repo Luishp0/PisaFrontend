@@ -11,7 +11,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    navigate('/login');
+    navigate('/');
   };
 
   const toggleMenu = () => {
@@ -34,10 +34,10 @@ const Navbar = () => {
       </button>
 
       <div className={`navbar-links ${isMenuOpen ? 'active' : ''}`}>
-        <button onClick={() => handleNavigation('/usuarios')}>Usuarios</button>
+        <button onClick={() => handleNavigation('/usuario')}>Usuarios</button>
         <button onClick={() => handleNavigation('/mantenimiento')}>Mantenimiento</button>
         <button onClick={() => handleNavigation('/reportes')}>Reportes</button>
-        <button onClick={() => handleNavigation('/indicadores')}>Indicadores</button>
+        <button onClick={() => handleNavigation('/inicio')}>Indicadores</button>
         <button onClick={handleLogout} className="logout-btn">Salir</button>
       </div>
     </nav>
