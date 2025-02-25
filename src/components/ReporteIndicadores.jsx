@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Calendar, Pencil, Trash2 } from 'lucide-react';
-import '../css/ReporteIndicadores.css';
 
 const ReporteIndicadores = () => {
   const [filters, setFilters] = useState({
@@ -85,81 +84,82 @@ const ReporteIndicadores = () => {
     <div className="reporte-container">
       <h1>Reporte de Indicadores</h1>
       
-      <div className="filters-card">
-        <form onSubmit={handleSubmit}>
-          <div className="filters-grid">
-            <div className="form-group">
-              <label>Centro</label>
-              <select name="centro" value={filters.centro} onChange={handleFilterChange}>
-                <option value="P108">P108</option>
-              </select>
-            </div>
+        <div className="filters-card">
+    <form onSubmit={handleSubmit}>
+      <div className="filters-grid">
+        <div className="form-group">
+          <label>Centro</label>
+          <select name="centro" value={filters.centro} onChange={handleFilterChange}>
+            <option value="P108">P108</option>
+          </select>
+        </div>
 
-            <div className="form-group">
-              <label>Departamento</label>
-              <select name="departamento" value={filters.departamento} onChange={handleFilterChange}>
-                <option value="801">801</option>
-              </select>
-            </div>
+        <div className="form-group">
+          <label>Departamento</label>
+          <select name="departamento" value={filters.departamento} onChange={handleFilterChange}>
+            <option value="801">801</option>
+          </select>
+        </div>
 
-            <div className="form-group">
-              <label>Línea</label>
-              <select name="linea" value={filters.linea} onChange={handleFilterChange}>
-                <option value="BOLSAS LINEA 1">BOLSAS LINEA 1</option>
-              </select>
-            </div>
+        <div className="form-group">
+          <label>Línea</label>
+          <select name="linea" value={filters.linea} onChange={handleFilterChange}>
+            <option value="BOLSAS LINEA 1">BOLSAS LINEA 1</option>
+          </select>
+        </div>
 
-            <div className="form-group">
-              <label>Proceso</label>
-              <select name="proceso" value={filters.proceso} onChange={handleFilterChange}>
-                <option value="DOSIFICADO">DOSIFICADO</option>
-              </select>
-            </div>
+        <div className="form-group">
+          <label>Proceso</label>
+          <select name="proceso" value={filters.proceso} onChange={handleFilterChange}>
+            <option value="DOSIFICADO">DOSIFICADO</option>
+          </select>
+        </div>
 
-            <div className="form-group">
-              <label>Velocidad</label>
-              <select name="velocidad" value={filters.velocidad} onChange={handleFilterChange}>
-                <option value="">Seleccionar...</option>
-              </select>
-            </div>
-
-            <div className="date-range">
-              <div className="form-group">
-                <label>Desde</label>
-                <div className="date-input-container">
-                  <input
-                    type="date"
-                    name="fechaDesde"
-                    value={filters.fechaDesde}
-                    onChange={handleFilterChange}
-                  />
-                  <Calendar className="calendar-icon" size={20} />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Hasta</label>
-                <div className="date-input-container">
-                  <input
-                    type="date"
-                    name="fechaHasta"
-                    value={filters.fechaHasta}
-                    onChange={handleFilterChange}
-                  />
-                  <Calendar className="calendar-icon" size={20} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="button-group">
-            <button type="submit" className="btn-primary">OBTENER INFORMACIÓN</button>
-            <button type="button" className="btn-secondary" onClick={handleReset}>
-              INICIALIZAR PARÁMETROS
-            </button>
-          </div>
-        </form>
+        <div className="form-group">
+          <label>Velocidad</label>
+          <select name="velocidad" value={filters.velocidad} onChange={handleFilterChange}>
+            <option value="">Seleccionar...</option>
+          </select>
+        </div>
       </div>
+      
+      {/* El contenedor de fechas ahora está fuera del filters-grid principal */}
+      <div className="date-range">
+        <div className="form-group">
+          <label>Desde</label>
+          <div className="date-input-container">
+            <input
+              type="date"
+              name="fechaDesde"
+              value={filters.fechaDesde}
+              onChange={handleFilterChange}
+            />
+            <Calendar className="calendar-icon" size={20} />
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Hasta</label>
+          <div className="date-input-container">
+            <input
+              type="date"
+              name="fechaHasta"
+              value={filters.fechaHasta}
+              onChange={handleFilterChange}
+            />
+            <Calendar className="calendar-icon" size={20} />
+          </div>
+        </div>
+      </div>
+
+      <div className="button-group">
+        <button type="submit" className="btn-primary">OBTENER INFORMACIÓN</button>
+        <button type="button" className="btn-secondary" onClick={handleReset}>
+          INICIALIZAR PARÁMETROS
+        </button>
+      </div>
+    </form>
+        </div>
 
       <div className="results-card">
         <h2>Resultados</h2>

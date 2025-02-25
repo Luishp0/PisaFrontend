@@ -1,18 +1,24 @@
-import { Routes, Route } from 'react-router-dom';
-import LoginPage from './pages/LoginPage.jsx';  // Ajusta la ruta según tu estructura de archivos
-import PaginaPrincipal from './pages/PaginaPrincipal.jsx'
-import UserManagement from './components/UserManagement.jsx';
-import RegisterForm from './components/RegisterForm.jsx';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { NotificationProvider } from './components/NotificationProvider';
+import LoginPage from './pages/LoginPage';
+import PaginaPrincipal from '../src/pages/PaginaPrincipal.jsx'
+import UserManagement from '../src/components/UserManagement.jsx'
+import RegisterForm from './components/RegisterForm.jsx'
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LoginPage />} />
-      <Route path="/inicio" element={<PaginaPrincipal/>} />
-      <Route path='/usuario' element={<UserManagement/>} />
-      <Route path='/usuarioRegistro' element={<RegisterForm/>} />
-      
-    </Routes>
+    <NotificationProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LoginPage />} />
+          <Route path='/inicio' element={<PaginaPrincipal/>} />
+          <Route path='/usuario' element= {<UserManagement/>} />
+          <Route path='/usuarioRegistrado' element= {<RegisterForm/>} />
+          
+        </Routes>
+      </BrowserRouter>
+    </NotificationProvider>
   );
 }
 
