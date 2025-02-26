@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Filter, FileSpreadsheet, Download, ChevronRight, ChevronDown, X } from 'lucide-react';
+import { Calendar, Filter, FileSpreadsheet,  ChevronRight, ChevronDown, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import NavbarReport from '../components/NavbarReport';
 
@@ -652,13 +652,6 @@ const ReportCompliance = () => {
   );
 };
 
-// Add this CSS class to your global styles to hide scrollbars but keep functionality
-// .hide-scrollbar::-webkit-scrollbar {
-//   display: none;
-// }
-// .hide-scrollbar {
-//   -ms-overflow-style: none;
-//   scrollbar-width: none;
-// }
+
 
 export default ReportCompliance;

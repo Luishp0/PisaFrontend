@@ -9,6 +9,7 @@ import PaginaUsuario from './pages/PaginaUsuario.jsx';
 import EditarIndicador from './pages/EditarIndicador.jsx';
 import ReportBoard1 from './pages/ReportBoard1.jsx';
 import ReportCompliance from './pages/ReportCompliance.jsx';
+import Grafica1 from './pages/Grafica1.jsx';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path='/editarIndicadores' element= {<EditarIndicador/>} />
           <Route path='/reporte1' element= {<ReportBoard1/>} />
           <Route path='/reporte2' element= {<ReportCompliance/>} />
+          <Route path='/reporte3' element= {<Grafica1/>} />
           
         </Routes>
       </BrowserRouter>
