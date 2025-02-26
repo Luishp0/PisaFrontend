@@ -8,6 +8,7 @@ const PaginaPrincipal = () => {
     <div >
       
         <Navbar/>
+        <ReporteIndicadores/>
         
       
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Pencil, Trash2 } from 'lucide-react';
 
 const ReporteIndicadores = () => {
@@ -12,23 +12,14 @@ const ReporteIndicadores = () => {
     fechaHasta: '2025-01-30'
   });
 
-  const [results, setResults] = useState([
-    {
-      material: '4003179',
-      orden: '12266177',
-      lote: 'Q24E028',
-      piezas: '0',
-      nominales: '0',
-      fecha: '2025-01-01',
-      hora: '00:00',
-      turno: 'C',
-      ciclo: '60',
-      peros: '60',
-      rechazos: '0',
-      proceso: 'DOSIFICADO'
-    },
-    // Add more sample data as needed
-  ]);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Cargar datos al iniciar
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -38,8 +29,10 @@ const ReporteIndicadores = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
       const response = await fetch('YOUR_API_ENDPOINT/indicadores', {
         method: 'POST',
@@ -50,21 +43,64 @@ const ReporteIndicadores = () => {
         body: JSON.stringify(filters)
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        setResults(data);
+      if (!response.ok) {
+        throw new Error(`Error en la petición: ${response.status}`);
       }
+      
+      const data = await response.json();
+      setResults(data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
+      setError('Error al obtener los datos. Intente nuevamente.');
+      // Datos de muestra para desarrollo
+      setResults([
+        {
+          material: '4003179',
+          orden: '12266177',
+          lote: 'Q24E028',
+          piezas: '0',
+          nominales: '0',
+          fecha: '2025-01-01',
+          hora: '00:00',
+          turno: 'C',
+          ciclo: '60',
+          peros: '60',
+          rechazos: '0',
+          proceso: 'DOSIFICADO'
+        },
+        // Más datos para las filas
+        ...Array(9).fill(0).map((_, i) => ({
+          material: '4003179',
+          orden: '12266177',
+          lote: 'Q24E028',
+          piezas: '0',
+          nominales: '0',
+          fecha: '2025-01-01',
+          hora: `0${i+1}:00`,
+          turno: 'C',
+          ciclo: '60',
+          peros: '60',
+          rechazos: '0',
+          proceso: 'DOSIFICADO'
+        }))
+      ]);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    fetchData();
+  };
+
   const handleEdit = (row) => {
-    // Add your edit logic here
+    // Lógica para editar
     console.log('Edit row:', row);
   };
   
   const handleDelete = (row) => {
-    // Add your delete logic here
+    // Lógica para eliminar
     console.log('Delete row:', row);
   };
 
@@ -81,143 +117,194 @@ const ReporteIndicadores = () => {
   };
 
   return (
-    <div className="reporte-container">
-      <h1>Reporte de Indicadores</h1>
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold text-center mb-8">Reporte de indicadores</h1>
       
-        <div className="filters-card">
-    <form onSubmit={handleSubmit}>
-      <div className="filters-grid">
-        <div className="form-group">
-          <label>Centro</label>
-          <select name="centro" value={filters.centro} onChange={handleFilterChange}>
-            <option value="P108">P108</option>
-          </select>
-        </div>
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 className="text-2xl font-bold mb-6">Reporte de Indicadores</h2>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-medium mb-1">Centro</label>
+              <select 
+                name="centro" 
+                value={filters.centro} 
+                onChange={handleFilterChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="P108">P108</option>
+              </select>
+            </div>
 
-        <div className="form-group">
-          <label>Departamento</label>
-          <select name="departamento" value={filters.departamento} onChange={handleFilterChange}>
-            <option value="801">801</option>
-          </select>
-        </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Departamento</label>
+              <select 
+                name="departamento" 
+                value={filters.departamento} 
+                onChange={handleFilterChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="801">801</option>
+              </select>
+            </div>
 
-        <div className="form-group">
-          <label>Línea</label>
-          <select name="linea" value={filters.linea} onChange={handleFilterChange}>
-            <option value="BOLSAS LINEA 1">BOLSAS LINEA 1</option>
-          </select>
-        </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Línea</label>
+              <select 
+                name="linea" 
+                value={filters.linea} 
+                onChange={handleFilterChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="BOLSAS LINEA 1">BOLSAS LINEA 1</option>
+              </select>
+            </div>
 
-        <div className="form-group">
-          <label>Proceso</label>
-          <select name="proceso" value={filters.proceso} onChange={handleFilterChange}>
-            <option value="DOSIFICADO">DOSIFICADO</option>
-          </select>
-        </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Proceso</label>
+              <select 
+                name="proceso" 
+                value={filters.proceso} 
+                onChange={handleFilterChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="DOSIFICADO">DOSIFICADO</option>
+              </select>
+            </div>
 
-        <div className="form-group">
-          <label>Velocidad</label>
-          <select name="velocidad" value={filters.velocidad} onChange={handleFilterChange}>
-            <option value="">Seleccionar...</option>
-          </select>
-        </div>
-      </div>
-      
-      {/* El contenedor de fechas ahora está fuera del filters-grid principal */}
-      <div className="date-range">
-        <div className="form-group">
-          <label>Desde</label>
-          <div className="date-input-container">
-            <input
-              type="date"
-              name="fechaDesde"
-              value={filters.fechaDesde}
-              onChange={handleFilterChange}
-            />
-            <Calendar className="calendar-icon" size={20} />
+            <div>
+              <label className="block text-sm font-medium mb-1">Velocidad</label>
+              <select 
+                name="velocidad" 
+                value={filters.velocidad} 
+                onChange={handleFilterChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Seleccionar...</option>
+              </select>
+            </div>
           </div>
-        </div>
+          
+          <div className="flex flex-col md:flex-row md:items-end gap-6 mb-8">
+            <div className="flex-1">
+              <label className="block text-sm font-medium mb-1">Desde</label>
+              <div className="relative">
+                <input
+                  type="date"
+                  name="fechaDesde"
+                  value={filters.fechaDesde}
+                  onChange={handleFilterChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Calendar className="absolute right-3 top-2 text-gray-400" size={20} />
+              </div>
+            </div>
 
-        <div className="form-group">
-          <label>Hasta</label>
-          <div className="date-input-container">
-            <input
-              type="date"
-              name="fechaHasta"
-              value={filters.fechaHasta}
-              onChange={handleFilterChange}
-            />
-            <Calendar className="calendar-icon" size={20} />
+            <div className="flex-1">
+              <label className="block text-sm font-medium mb-1">Hasta</label>
+              <div className="relative">
+                <input
+                  type="date"
+                  name="fechaHasta"
+                  value={filters.fechaHasta}
+                  onChange={handleFilterChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Calendar className="absolute right-3 top-2 text-gray-400" size={20} />
+              </div>
+            </div>
           </div>
-        </div>
+
+          <div className="flex flex-col md:flex-row justify-center gap-4">
+            <button 
+              type="submit" 
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-md transition duration-200"
+              style={{
+                backgroundColor: '#2563EB', // Azul más vibrante
+                fontWeight: '500'
+              }}
+            >
+              OBTENER INFORMACIÓN
+            </button>
+            <button 
+              type="button" 
+              onClick={handleReset}
+              className="bg-white hover:bg-gray-100 text-gray-800 font-medium py-2 px-6 border border-gray-300 rounded-md shadow-sm transition duration-200"
+              
+            >
+              INICIALIZAR PARÁMETROS
+            </button>
+          </div>
+        </form>
       </div>
 
-      <div className="button-group">
-        <button type="submit" className="btn-primary">OBTENER INFORMACIÓN</button>
-        <button type="button" className="btn-secondary" onClick={handleReset}>
-          INICIALIZAR PARÁMETROS
-        </button>
-      </div>
-    </form>
-        </div>
-
-      <div className="results-card">
-        <h2>Resultados</h2>
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Material</th>
-                <th>Orden</th>
-                <th>Lote</th>
-                <th>Piezas</th>
-                <th>Nominales</th>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>Turno</th>
-                <th>Ciclo</th>
-                <th>Peros</th>
-                <th>Rechazos</th>
-                <th>Proceso</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.map((row, index) => (
-                <tr key={index}>
-                  <td>{row.material}</td>
-                  <td>{row.orden}</td>
-                  <td>{row.lote}</td>
-                  <td>{row.piezas}</td>
-                  <td>{row.nominales}</td>
-                  <td>{row.fecha}</td>
-                  <td>{row.hora}</td>
-                  <td>{row.turno}</td>
-                  <td>{row.ciclo}</td>
-                  <td>{row.peros}</td>
-                  <td>{row.rechazos}</td>
-                  <td>{row.proceso}</td>
-                  <td className="actions-cell">
-                    <button 
-                      className="action-btn edit"
-                      onClick={() => handleEdit(row)}
-                      title="Editar"
-                    >
-                      <Pencil size={18} />
-                    </button>
-                    <button 
-                      className="action-btn delete"
-                      onClick={() => handleDelete(row)}
-                      title="Eliminar"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-bold mb-4">Resultados</h2>
+        
+        {loading ? (
+          <div className="text-center py-8">Cargando datos...</div>
+        ) : error ? (
+          <div className="text-center text-red-500 py-8">{error}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orden</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Piezas</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nominales</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turno</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciclo</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peros</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rechazos</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proceso</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {results.map((row, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="py-3 px-4 text-sm">{row.material}</td>
+                    <td className="py-3 px-4 text-sm">{row.orden}</td>
+                    <td className="py-3 px-4 text-sm">{row.lote}</td>
+                    <td className="py-3 px-4 text-sm">{row.piezas}</td>
+                    <td className="py-3 px-4 text-sm">{row.nominales}</td>
+                    <td className="py-3 px-4 text-sm">{row.fecha}</td>
+                    <td className="py-3 px-4 text-sm">{row.hora}</td>
+                    <td className="py-3 px-4 text-sm">{row.turno}</td>
+                    <td className="py-3 px-4 text-sm">{row.ciclo}</td>
+                    <td className="py-3 px-4 text-sm">{row.peros}</td>
+                    <td className="py-3 px-4 text-sm">{row.rechazos}</td>
+                    <td className="py-3 px-4 text-sm">{row.proceso}</td>
+                    <td className="py-3 px-4 text-sm">
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => handleEdit(row)}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="Editar"
+                        >
+                          <Pencil size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(row)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Eliminar"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
