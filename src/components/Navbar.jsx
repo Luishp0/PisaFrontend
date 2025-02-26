@@ -55,7 +55,7 @@ const Navbar = () => {
               Mantenimiento
             </button>
             <button 
-              onClick={() => handleNavigation('/reportes')}
+              onClick={() => handleNavigation('/reporte1')}
               className="text-blue-600 font-medium hover:text-blue-800 px-2 py-1"
             >
               Reportes
