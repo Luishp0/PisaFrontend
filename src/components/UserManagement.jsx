@@ -16,7 +16,8 @@ const UserManagement = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:8000/usuario');
+        const apiUrl = process.env.REACT_APP_API_URL;
+        const response = await fetch(`${apiUrl}/usuario`);
         
         if (!response.ok) {
           throw new Error('Error al obtener los usuarios');
@@ -41,7 +42,8 @@ const UserManagement = () => {
       
       if (!userToUpdate) return;
       
-      const response = await fetch(`http://localhost:8000/usuario/${userId}`, {
+      const apiUrl = process.env.REACT_APP_API_URL;
+      const response = await fetch(`${apiUrl}/usuario/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

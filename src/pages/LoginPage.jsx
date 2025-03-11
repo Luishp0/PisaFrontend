@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useNotification } from '../components/NotificationProvider.jsx'; // Importa el hook
+import { useNotification } from '../components/NotificationProvider.jsx';
 import mejoraContinua from '../img/mejoraContinua.png';
 import pisaIcono from '../img/pisaIcono.png';
 
@@ -9,24 +9,37 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState(null);
+  const [intentosRestantes, setIntentosRestantes] = useState(null);
   const navigate = useNavigate();
-  const { showError, showSuccess } = useNotification(); // Usa el hook de notificación
+  const { showError, showSuccess, showWarning} = useNotification();
+
+  // Obteniendo la URL base de la API desde las variables de entorno
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoginError(null);
+    setIntentosRestantes(null);
 
     if (!username || !password) {
-      showError('Por favor, complete todos los campos');
+      showWarning('Por favor, complete todos los campos');
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/login', {
+      setIsLoading(true);
+      
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ 
+          nombreUsuario: username, 
+          contraseña: password 
+        }),
       });
 
       const data = await response.json();
@@ -34,17 +47,70 @@ const LoginPage = () => {
       if (response.ok) {
         // Guardar el token en localStorage
         localStorage.setItem('token', data.token);
+        
+        // Guardar información del usuario si está disponible
+        if (data.user) {
+          localStorage.setItem('userData', JSON.stringify(data.user));
+        }
+        
         // Mostrar notificación de éxito
-        showSuccess('Inicio de sesión exitoso');
-        // Redirigir al dashboard (con pequeño retraso para que se vea la notificación)
+        showSuccess('¡Bienvenido! Inicio de sesión exitoso');
+        
+        // Redirigir según el rol
         setTimeout(() => {
-          navigate('/dashboard');
+          // Redirección basada en el rol del usuario
+          if (data.user && data.user.idRol) {
+            switch(data.user.idRol) {
+              case '67b3ef205de7d75b4cd02e5d': // Usuario
+                navigate('/usuario');
+                break;
+              case '67b3ee195de7d75b4cd02e56': // Administrador
+                navigate('/admin');
+                break;
+              default:
+                navigate('/usuario'); // Ruta por defecto
+            }
+          } else {
+            navigate('/usuario'); // Ruta por defecto si no hay rol
+          }
         }, 1000);
       } else {
-        showError(data.message || 'Error al iniciar sesión');
+        // Manejar diferentes tipos de errores
+        setLoginError(data.error || 'Error al iniciar sesión');
+        
+        // Si la cuenta está bloqueada
+        if (data.bloqueado) {
+          showError('Cuenta bloqueada', {
+            description: 'Tu cuenta ha sido bloqueada. Por favor, contacta al administrador.'
+          });
+        } 
+        // Si hay intentos fallidos pero no está bloqueado
+        else if (data.intentosRestantes !== undefined) {
+          setIntentosRestantes(data.intentosRestantes);
+          
+          if (data.intentosRestantes <= 2) {
+            showWarning(`¡Atención! ${data.error}`, {
+              description: `Te quedan ${data.intentosRestantes} ${data.intentosRestantes === 1 ? 'intento' : 'intentos'} antes de que tu cuenta sea bloqueada.`
+            });
+          } else {
+            showError(`Error: ${data.error}`, {
+              description: `Te quedan ${data.intentosRestantes} intentos antes de que tu cuenta sea bloqueada.`
+            });
+          }
+        } 
+        // Error genérico
+        else {
+          showError(data.error || 'Error al iniciar sesión');
+        }
       }
     } catch (err) {
-      showError('Error de conexión con el servidor');
+      console.error(err);
+      setLoginError('Error de conexión con el servidor');
+      showError('Error de conexión', { 
+        description: 'No se pudo conectar con el servidor. Verifica tu conexión a internet.' 
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -72,6 +138,21 @@ const LoginPage = () => {
             <div className="max-w-md mx-auto">
               <h1 className="text-3xl font-bold text-blue-700 mb-8">Inicio de Sesión</h1>
               
+              {/* Mensajes de error */}
+              {loginError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start">
+                  <AlertCircle className="text-red-500 mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-red-700 text-sm font-medium">{loginError}</p>
+                    {intentosRestantes !== null && intentosRestantes > 0 && (
+                      <p className="text-red-600 text-xs mt-1">
+                        Te quedan {intentosRestantes} {intentosRestantes === 1 ? 'intento' : 'intentos'} antes de que tu cuenta sea bloqueada.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
               <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-2">
                   <label htmlFor="username" className="block text-sm font-medium text-blue-800">
@@ -84,6 +165,7 @@ const LoginPage = () => {
                     className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 
@@ -99,11 +181,13 @@ const LoginPage = () => {
                       className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
                     />
                     <button
                       type="button"
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400"
                       onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoading}
                     >
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
@@ -112,20 +196,26 @@ const LoginPage = () => {
                 
                 <button 
                   type="submit" 
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-md focus:outline-none mt-6"
+                  className={`w-full ${isLoading ? 'bg-blue-400' : 'bg-blue-600'} text-white py-3 px-4 rounded-md focus:outline-none mt-6 flex justify-center items-center`}
                   style={{
-                    backgroundColor: '#2563EB',
+                    backgroundColor: isLoading ? '#60A5FA' : '#2563EB',
                     borderRadius: '0.375rem',
                     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                   }}
+                  disabled={isLoading}
                 >
-                  Ingresar
+                  {isLoading ? 'Iniciando sesión...' : 'Ingresar'}
                 </button>
                 
-                <div className="text-center mt-6">
-                  <a href="#" className="text-blue-600 hover:text-blue-800 text-sm">
-                    ¿Olvidaste la contraseña?
-                  </a>
+                
+                
+                {/* Información adicional */}
+                <div className="mt-4 flex items-start text-xs text-gray-500">
+                  <Info className="h-4 w-4 mr-1 flex-shrink-0 mt-0.5" />
+                  <p>
+                    Por tu seguridad, después de 5 intentos fallidos tu cuenta será bloqueada temporalmente.
+                    Si tienes problemas para acceder, por favor contacta al administrador.
+                  </p>
                 </div>
               </form>
             </div>
