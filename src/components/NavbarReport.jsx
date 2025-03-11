@@ -22,7 +22,7 @@ const NavbarReport = () => {
   const tabs = [
     { id: 'junta', label: 'Junta previa', path: '/reporte1' },
     { id: 'utilizacion', label: 'Utilización', path: '/reporte3' },
-    { id: 'dms', label: 'DMS', path: '/dms' },
+    { id: 'dms', label: 'DMS', path: '/reporte3' },
     { id: 'cumplimiento', label: 'Cumplimiento', path: '/reporte2' }
   ];
   

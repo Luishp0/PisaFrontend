@@ -29,7 +29,7 @@ const ReportCompliance = () => {
   const tableData = [
     {
       linea: '5A',
-      fecha: '30-ene',
+      fecha: '29-ene',
       planPVO: 108000,
       realPVO: 88130,
       cumplimiento: 82,
@@ -44,7 +44,7 @@ const ReportCompliance = () => {
     },
     {
       linea: '6A',
-      fecha: '30-ene',
+      fecha: '31-ene',
       planPVO: 108000,
       realPVO: 85110,
       cumplimiento: 79,
@@ -60,7 +60,7 @@ const ReportCompliance = () => {
     },
     {
       linea: '8A',
-      fecha: '30-ene',
+      fecha: '01-feb',
       planPVO: 251280,
       realPVO: 155611,
       cumplimiento: 62,

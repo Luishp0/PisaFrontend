@@ -16,10 +16,10 @@ function App() {
     <NotificationProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<LoginPage />} />
+          <Route path="/i" element={<LoginPage />} />
           <Route path='/inicio' element={<PaginaPrincipal/>} />
           <Route path='/usuario' element= {<UserManagement/>} />
-          <Route path='/usuarioRegistrado' element= {<RegisterForm/>} />
+          <Route path='/' element= {<RegisterForm/>} />
           <Route path='/usuario2' element= {<PaginaUsuario/>} />
           <Route path='/editarIndicadores' element= {<EditarIndicador/>} />
           <Route path='/reporte1' element= {<ReportBoard1/>} />
