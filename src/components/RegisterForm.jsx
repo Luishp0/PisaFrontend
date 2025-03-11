@@ -20,7 +20,9 @@ const RegisterForm = () => {
   ];
 
   const validationSchema = Yup.object({
-    nombreUsuario: Yup.string().required('El nombre de usuario es obligatorio'),
+    nombreUsuario: Yup.string()
+      .required('El nombre de usuario es obligatorio')
+      .min(5, 'El nombre de usuario debe tener al menos 5 caracteres'),
     contrasena: Yup.string()
       .min(6, 'La contraseña debe tener al menos 6 caracteres')
       .matches(
@@ -38,6 +40,12 @@ const RegisterForm = () => {
       console.log('Verificando username:', username);
       if (!username) {
         setFieldError('nombreUsuario', 'El nombre de usuario es obligatorio');
+        setIsUserVerified(false);
+        return false;
+      }
+      
+      if (username.length < 5) {
+        setFieldError('nombreUsuario', 'El nombre de usuario debe tener al menos 5 caracteres');
         setIsUserVerified(false);
         return false;
       }
@@ -208,7 +216,7 @@ const RegisterForm = () => {
                           : 'border-gray-300'
                       } rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500`}
                       onChange={(e) => {
-                        const username = e.target.value;
+                        const username = e.target.value.trim(); // Eliminar espacios en blanco
                         setFieldValue('nombreUsuario', username);
                         // Solo actualizar el estado y reiniciar la verificación si el valor ha cambiado
                         if (username !== nombreUsuario) {
