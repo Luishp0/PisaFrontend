@@ -1,43 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useNotification } from '../components/NotificationProvider.jsx';
 import statisticsImage from '../img/fondoUsuario.png';
 import Navbar from './Navbar';
+import debounce from 'lodash/debounce';
 
 const RegisterForm = () => {
   const { showSuccess, showError } = useNotification();
   const [isLoading, setIsLoading] = useState(false);
   const [isUserVerified, setIsUserVerified] = useState(false);
   const [isVerifyingUser, setIsVerifyingUser] = useState(false);
+  const [nombreUsuario, setNombreUsuario] = useState('');
 
-  // Opciones para el selector de puesto
   const tipoUsuarioOptions = [
     { value: '', label: 'Selecciona una opción' },
     { value: 'Usuario', label: 'Usuario' },
     { value: 'Administrador', label: 'Administrador' }
   ];
 
-  // Schema de validación con Yup
   const validationSchema = Yup.object({
-    nombreUsuario: Yup.string()
-      .min(3, 'El nombre de usuario debe tener al menos 3 caracteres')
-      .max(20, 'El nombre de usuario no debe exceder los 20 caracteres')
-      .matches(
-        /^[a-zA-Z0-9._-]+$/,
-        'El nombre de usuario solo puede contener letras, números, puntos, guiones y guiones bajos'
-      )
-      .test(
-        'no-spaces',
-        'El nombre de usuario no puede contener espacios',
-        value => !value || !value.includes(' ')
-      )
-      .test(
-        'not-only-numbers',
-        'El nombre de usuario no puede contener solo números',
-        value => !value || !/^\d+$/.test(value)
-      )
-      .required('El nombre de usuario es obligatorio'),
+    nombreUsuario: Yup.string().required('El nombre de usuario es obligatorio'),
     contrasena: Yup.string()
       .min(6, 'La contraseña debe tener al menos 6 caracteres')
       .matches(
@@ -45,58 +28,73 @@ const RegisterForm = () => {
         'La contraseña debe contener al menos una letra mayúscula, una minúscula, un número y un carácter especial'
       )
       .required('La contraseña es obligatoria'),
-    familia: Yup.string()
-      .required('La familia es obligatoria'),
-    puesto: Yup.string()
-      .required('Debes seleccionar un puesto')
+    familia: Yup.string().required('La familia es obligatoria'),
+    puesto: Yup.string().required('Debes seleccionar un puesto')
   });
 
-  // Función para verificar disponibilidad de nombre de usuario
-  const checkUsernameTaken = async (username, setFieldError) => {
-    // Validación de formato antes de consultar la base de datos
-    try {
-      await validationSchema.fields.nombreUsuario.validate(username);
-    } catch (error) {
-      setFieldError('nombreUsuario', error.message);
-      return false;
-    }
-
-    setIsVerifyingUser(true);
-    
-    try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${API_URL}/usuario/check-username?username=${encodeURIComponent(username)}`);
-      
-      if (!response.ok) {
-        throw new Error('Error al verificar nombre de usuario');
-      }
-      
-      const data = await response.json();
-      
-      if (data.disponible) {
-        showSuccess(data.mensaje || 'Nombre de usuario disponible');
-        setIsUserVerified(true);
-        return true;
-      } else {
-        showError(data.mensaje || 'El nombre de usuario ya está en uso');
-        setFieldError('nombreUsuario', data.mensaje || 'Este nombre de usuario ya está en uso');
+  // Modificamos la función para evitar verificaciones innecesarias
+  const checkUsernameTaken = useCallback(
+    debounce(async (username, setFieldError) => {
+      console.log('Verificando username:', username);
+      if (!username) {
+        setFieldError('nombreUsuario', 'El nombre de usuario es obligatorio');
         setIsUserVerified(false);
         return false;
       }
-    } catch (error) {
-      console.error('Error al verificar nombre de usuario:', error);
-      showError('No se pudo verificar la disponibilidad del nombre de usuario');
-      setIsUserVerified(false);
-      return false;
-    } finally {
-      setIsVerifyingUser(false);
+
+      setIsVerifyingUser(true);
+
+      try {
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+        const response = await fetch(`${API_URL}/usuario/check-username?username=${encodeURIComponent(username)}`);
+
+        if (!response.ok) {
+          throw new Error('Error al verificar nombre de usuario');
+        }
+
+        const data = await response.json();
+
+        if (data.disponible) {
+          showSuccess(data.mensaje || 'Nombre de usuario disponible');
+          setIsUserVerified(true);
+          return true;
+        } else {
+          showError(data.mensaje || 'El nombre de usuario ya está en uso');
+          setFieldError('nombreUsuario', data.mensaje || 'Este nombre de usuario ya está en uso');
+          setIsUserVerified(false);
+          return false;
+        }
+      } catch (error) {
+        console.error('Error al verificar nombre de usuario:', error);
+        showError('No se pudo verificar la disponibilidad del nombre de usuario');
+        setIsUserVerified(false);
+        return false;
+      } finally {
+        setIsVerifyingUser(false);
+      }
+    }, 500),
+    [showSuccess, showError]
+  );
+
+  // Variable para almacenar el último valor verificado
+  const [lastCheckedUsername, setLastCheckedUsername] = useState('');
+
+  useEffect(() => {
+    // Solo verificar si hay un nombre de usuario y es diferente al último verificado
+    if (nombreUsuario && nombreUsuario !== lastCheckedUsername) {
+      checkUsernameTaken(nombreUsuario, () => {});
+      setLastCheckedUsername(nombreUsuario);
     }
-  };
+  }, [nombreUsuario, lastCheckedUsername, checkUsernameTaken]);
 
   const handleSubmit = async (values, { resetForm, setFieldError, setSubmitting }) => {
-    // Verificar si el usuario ha sido verificado antes de enviar
+    // Verificar si el último username verificado coincide con el actual
+    if (values.nombreUsuario !== lastCheckedUsername) {
+      await checkUsernameTaken(values.nombreUsuario, setFieldError);
+      setLastCheckedUsername(values.nombreUsuario);
+    }
     if (!isUserVerified) {
-      showError('Por favor, verifica la disponibilidad del nombre de usuario primero');
+      showError('Por favor, espera a que se verifique la disponibilidad del nombre de usuario');
       return;
     }
 
@@ -152,6 +150,7 @@ const RegisterForm = () => {
       showSuccess(data.mensaje || 'Usuario registrado exitosamente');
       resetForm();
       setIsUserVerified(false);
+      setNombreUsuario('');
     } catch (error) {
       console.error('Error de registro completo:', error);
       
@@ -165,9 +164,8 @@ const RegisterForm = () => {
 
   return (
     <div>
-      <Navbar/>
+      <Navbar />
       <div className="flex flex-col md:flex-row bg-white rounded-lg shadow-lg overflow-hidden max-w-6xl mx-auto my-10">
-        {/* Sección de la imagen */}
         <div className="md:w-1/2 bg-blue-50">
           <div className="h-full flex items-center justify-center p-6">
             <img 
@@ -177,8 +175,7 @@ const RegisterForm = () => {
             />
           </div>
         </div>
-        
-        {/* Sección del formulario */}
+
         <div className="md:w-1/2 p-8">
           <Formik
             initialValues={{
@@ -193,7 +190,7 @@ const RegisterForm = () => {
             {({ values, errors, touched, isSubmitting, setFieldValue, setFieldError }) => (
               <Form className="space-y-6">
                 <h1 className="text-2xl font-bold text-blue-700 mb-6">Registrar Usuario</h1>
-                
+
                 <div className="space-y-2">
                   <label htmlFor="nombreUsuario" className="block text-sm font-medium text-gray-700">
                     Usuario
@@ -213,35 +210,26 @@ const RegisterForm = () => {
                       onChange={(e) => {
                         const username = e.target.value;
                         setFieldValue('nombreUsuario', username);
-                        setIsUserVerified(false);
+                        // Solo actualizar el estado y reiniciar la verificación si el valor ha cambiado
+                        if (username !== nombreUsuario) {
+                          setNombreUsuario(username);
+                          setIsUserVerified(false);
+                        }
                       }}
                     />
-                    {/* Modificación para mostrar el botón cuando hay texto */}
-                    {values.nombreUsuario.length >= 3 && !isUserVerified && (
-                      <button
-                        type="button"
-                        onClick={() => checkUsernameTaken(values.nombreUsuario, setFieldError)}
-                        disabled={isVerifyingUser} 
-                        className={`px-4 py-2 rounded-md transition duration-150 ease-in-out ${
-                          isVerifyingUser
-                            ? 'bg-gray-300 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                        }`}
-                      >
-                        {isVerifyingUser ? 'Verificando...' : 'Verificar'}
-                      </button>
-                    )}
-                    {isUserVerified && (
-                      <span className="text-green-600 font-medium ml-2">
-                        ✓ Verificado
-                      </span>
-                    )}
+                    {isVerifyingUser && <span className="text-gray-600 ml-2">Verificando...</span>}
+                    {isUserVerified && <span className="text-green-600 font-medium ml-2">✓ Verificado</span>}
                   </div>
                   <ErrorMessage 
                     name="nombreUsuario" 
                     component="div" 
                     className="text-red-500 text-sm mt-1" 
                   />
+                  {values.nombreUsuario && !isUserVerified && !errors.nombreUsuario && (
+                    <div className="text-yellow-600 text-sm mt-1">
+                      ⚠️ Verificando disponibilidad del nombre de usuario...
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -309,8 +297,8 @@ const RegisterForm = () => {
 
                 <button 
                   type="submit" 
-                  className={`w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150 ease-in-out mt-6 shadow-md ${
-                    (isLoading || isSubmitting || !isUserVerified) 
+                  className={`w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-150 ease-in-out mt-6 shadow-md ${
+                    (isLoading || isSubmitting || !isUserVerified || isVerifyingUser) 
                       ? 'opacity-70 cursor-not-allowed' 
                       : ''
                   }`}
@@ -318,7 +306,7 @@ const RegisterForm = () => {
                     backgroundColor: '#2563EB',
                     fontWeight: '500'
                   }}
-                  disabled={isLoading || isSubmitting || !isUserVerified}
+                  disabled={isLoading || isSubmitting || !isUserVerified || isVerifyingUser}
                 >
                   {(isLoading || isSubmitting) ? 'Registrando...' : 'Registrar'}
                 </button>
