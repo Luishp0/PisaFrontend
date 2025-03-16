@@ -62,16 +62,16 @@ const LoginPage = () => {
           if (data.user && data.user.idRol) {
             switch(data.user.idRol) {
               case '67b3ef205de7d75b4cd02e5d': // Usuario
-                navigate('/usuario');
+                navigate('/usuario2');
                 break;
               case '67b3ee195de7d75b4cd02e56': // Administrador
-                navigate('/admin');
+                navigate('/inicio');
                 break;
               default:
-                navigate('/usuario'); // Ruta por defecto
+                navigate('/'); // Ruta por defecto
             }
           } else {
-            navigate('/usuario'); // Ruta por defecto si no hay rol
+            navigate('/'); // Ruta por defecto si no hay rol
           }
         }, 1000);
       } else {
