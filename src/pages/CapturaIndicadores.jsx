@@ -114,6 +114,8 @@ const CapturaIndicadores = () => {
                 />
               </div>
 
+             
+
               <div className="flex items-center">
                 <label className="w-32 text-gray-700">Proceso</label>
                 <div className="relative flex-1">
@@ -131,6 +133,7 @@ const CapturaIndicadores = () => {
                   <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500" />
                 </div>
               </div>
+              
               <div className="flex items-center">
                 <label className="w-32 text-gray-700">Velocidad</label>
                 <input
@@ -140,6 +143,7 @@ const CapturaIndicadores = () => {
                   placeholder="Velocidad"
                 />
               </div>
+              
 
               <div className="flex items-center">
                 <label className="w-32 text-gray-700">Líneas</label>
@@ -157,6 +161,15 @@ const CapturaIndicadores = () => {
                   </select>
                   <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500" />
                 </div>
+              </div>
+              <div className="flex items-center">
+                <label className="w-32 text-gray-700">Grupos</label>
+                <input
+                  type="text"
+                  className="flex-1 border border-gray-300 rounded px-3 py-2"
+                  name="grupos"
+                  placeholder="Número de grupos"
+                />
               </div>
               <div className="flex items-center">
                 <label className="w-32 text-gray-700">Material</label>
