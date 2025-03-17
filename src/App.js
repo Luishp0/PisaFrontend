@@ -20,7 +20,7 @@ function App() {
           <Route path='/inicio' element={<PaginaPrincipal/>} />
           <Route path='/usuario' element= {<UserManagement/>} />
           <Route path='/usuarioRegistrado' element= {<RegisterForm/>} />
-          <Route path='/usuario2' element= {<PaginaUsuario/>} />
+          <Route path='/paginaUsuario' element= {<PaginaUsuario/>} />
           <Route path='/editarIndicadores' element= {<EditarIndicador/>} />
           <Route path='/reporte1' element= {<ReportBoard1/>} />
           <Route path='/reporte2' element= {<ReportCompliance/>} />

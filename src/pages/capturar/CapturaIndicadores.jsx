@@ -1,53 +1,7 @@
 import React from 'react';
-import { Calendar, ChevronDown, Info, Plus, Trash2 } from 'lucide-react';
+import { Calendar, ChevronDown, Info, Plus } from 'lucide-react';
 
 const CapturaIndicadores = () => {
-  // Datos de ejemplo para la interfaz
-  const centros = [{ id: 1, nombre: 'Centro 1' }, { id: 2, nombre: 'Centro 2' }];
-  const departamentos = [{ id: 1, nombre: 'Departamento 1' }, { id: 2, nombre: 'Departamento 2' }];
-  const procesos = [{ id: 1, nombre: 'Proceso 1' }, { id: 2, nombre: 'Proceso 2' }];
-  const lineas = [{ id: 1, nombre: 'Línea 1' }, { id: 2, nombre: 'Línea 2' }];
-  const turnos = [{ id: 1, nombre: 'Turno Mañana' }, { id: 2, nombre: 'Turno Tarde' }];
-  const materiales = [{ id: 1, codigo: 'MAT-001' }, { id: 2, codigo: 'MAT-002' }];
-  const rechazos = [{ id: 1, nombre: 'Defecto A' }, { id: 2, nombre: 'Defecto B' }];
-  
-  // Niveles de paros para la UI
-  const nivelesParos = [
-    { id: 1, titulo: 'Nivel 1', items: ['Mecánico', 'Eléctrico'] },
-    { id: 2, titulo: 'Nivel 2', items: ['Motor', 'Sensor'] },
-    { id: 3, titulo: 'Nivel 3', items: ['Reemplazo', 'Ajuste'] },
-    { id: 4, titulo: 'Nivel 4', items: ['Completo', 'Parcial'] },
-    { id: 5, titulo: 'Nivel 5', items: ['Urgente', 'Normal'] }
-  ];
-  
-  // Ejemplo de rechazos agregados
-  const rechazosAgregados = [
-    { id: 101, tipo: 1, cantidad: 5 },
-    { id: 102, tipo: 2, cantidad: 3 }
-  ];
-  
-  // Ejemplo de paros seleccionados
-  const parosSeleccionados = [
-    { 
-      id: 201, 
-      nivel1: 'Mecánico', 
-      nivel2: 'Motor', 
-      nivel3: 'Reemplazo', 
-      nivel4: '', 
-      nivel5: '', 
-      duracion: 30 
-    },
-    { 
-      id: 202, 
-      nivel1: 'Eléctrico', 
-      nivel2: 'Sensor', 
-      nivel3: '', 
-      nivel4: '', 
-      nivel5: '', 
-      duracion: 15 
-    }
-  ];
-
   return (
     <div className="bg-gray-100 min-h-screen p-4">
       <div className="max-w-4xl mx-auto">
@@ -68,11 +22,6 @@ const CapturaIndicadores = () => {
                     name="centro"
                   >
                     <option value="">Seleccionar centro...</option>
-                    {centros.map(centro => (
-                      <option key={centro.id} value={centro.id}>
-                        {centro.nombre}
-                      </option>
-                    ))}
                   </select>
                   <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500" />
                 </div>
@@ -95,11 +44,6 @@ const CapturaIndicadores = () => {
                     name="departamento"
                   >
                     <option value="">Seleccionar departamento...</option>
-                    {departamentos.map(depto => (
-                      <option key={depto.id} value={depto.id}>
-                        {depto.nombre}
-                      </option>
-                    ))}
                   </select>
                   <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500" />
                 </div>
@@ -114,8 +58,6 @@ const CapturaIndicadores = () => {
                 />
               </div>
 
-             
-
               <div className="flex items-center">
                 <label className="w-32 text-gray-700">Proceso</label>
                 <div className="relative flex-1">
@@ -124,11 +66,6 @@ const CapturaIndicadores = () => {
                     name="proceso"
                   >
                     <option value="">Seleccionar proceso...</option>
-                    {procesos.map(proceso => (
-                      <option key={proceso.id} value={proceso.id}>
-                        {proceso.nombre}
-                      </option>
-                    ))}
                   </select>
                   <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500" />
                 </div>
@@ -144,7 +81,6 @@ const CapturaIndicadores = () => {
                 />
               </div>
               
-
               <div className="flex items-center">
                 <label className="w-32 text-gray-700">Líneas</label>
                 <div className="relative flex-1">
@@ -153,17 +89,12 @@ const CapturaIndicadores = () => {
                     name="linea"
                   >
                     <option value="">Seleccionar línea...</option>
-                    {lineas.map(linea => (
-                      <option key={linea.id} value={linea.id}>
-                        {linea.nombre}
-                      </option>
-                    ))}
                   </select>
                   <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500" />
                 </div>
               </div>
               <div className="flex items-center">
-                <label className="w-32 text-gray-700">Grupos</label>
+                <label className="w-32 text-gray-700">Grupo</label>
                 <input
                   type="text"
                   className="flex-1 border border-gray-300 rounded px-3 py-2"
@@ -179,11 +110,6 @@ const CapturaIndicadores = () => {
                     name="material"
                   >
                     <option value="">Seleccionar material...</option>
-                    {materiales.map(material => (
-                      <option key={material.id} value={material.id}>
-                        {material.codigo}
-                      </option>
-                    ))}
                   </select>
                   <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500" />
                 </div>
@@ -302,11 +228,6 @@ const CapturaIndicadores = () => {
                     name="turno"
                   >
                     <option value="">Seleccionar turno...</option>
-                    {turnos.map(turno => (
-                      <option key={turno.id} value={turno.id}>
-                        {turno.nombre}
-                      </option>
-                    ))}
                   </select>
                   <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500" />
                 </div>
@@ -344,11 +265,6 @@ const CapturaIndicadores = () => {
                     name="tipo"
                   >
                     <option value="">Seleccionar rechazo...</option>
-                    {rechazos.map(rechazo => (
-                      <option key={rechazo.id} value={rechazo.id}>
-                        {rechazo.nombre}
-                      </option>
-                    ))}
                   </select>
                   <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500" />
                 </div>
@@ -370,35 +286,6 @@ const CapturaIndicadores = () => {
                 </button>
               </div>
             </div>
-            
-            {/* Lista de rechazos agregados */}
-            {rechazosAgregados.length > 0 && (
-              <div className="mt-4 border-t pt-4">
-                <h3 className="text-lg font-semibold mb-2">Rechazos agregados</h3>
-                <div className="space-y-2">
-                  {rechazosAgregados.map(rechazo => {
-                    const rechazoInfo = rechazos.find(r => r.id === rechazo.tipo);
-                    return (
-                      <div key={rechazo.id} className="flex justify-between items-center p-2 bg-gray-50 border rounded">
-                        <div className="flex-1">
-                          <p className="font-medium">{rechazoInfo?.nombre || 'Rechazo'}</p>
-                        </div>
-                        <div className="w-1/4 text-right">
-                          <p>{rechazo.cantidad} unidades</p>
-                        </div>
-                        <div className="ml-2">
-                          <button 
-                            className="text-red-500 p-1 hover:bg-red-50 rounded"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -409,25 +296,20 @@ const CapturaIndicadores = () => {
           </div>
           <div className="bg-white p-4 border border-gray-300 rounded-b-md">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mb-4">
-              {nivelesParos.map((nivel) => (
+              {[1, 2, 3, 4, 5].map((nivel) => (
                 <div 
-                  key={nivel.id} 
+                  key={nivel} 
                   className="border border-gray-300 rounded"
                 >
                   <div className="bg-gray-100 p-2 text-center text-sm font-semibold border-b border-gray-300">
-                    {nivel.titulo}
+                    Nivel {nivel}
                   </div>
                   <div className="relative">
                     <select 
                       className="w-full border-0 p-2 appearance-none text-sm bg-white cursor-pointer"
-                      name={`nivel${nivel.id}`}
+                      name={`nivel${nivel}`}
                     >
                       <option value="">Seleccione...</option>
-                      {nivel.items.map((item, idx) => (
-                        <option key={idx} value={item}>
-                          {item}
-                        </option>
-                      ))}
                     </select>
                     <ChevronDown className="absolute right-2 top-2 h-4 w-4 text-gray-500 pointer-events-none" />
                   </div>
@@ -451,36 +333,6 @@ const CapturaIndicadores = () => {
                 <Plus className="h-4 w-4 mr-1" /> Agregar
               </button>
             </div>
-            
-            {/* Lista de paros agregados */}
-            {parosSeleccionados.length > 0 && (
-              <div className="mt-4 border-t pt-4">
-                <h3 className="text-lg font-semibold mb-2">Paros agregados</h3>
-                <div className="space-y-2">
-                  {parosSeleccionados.map(paro => (
-                    <div key={paro.id} className="p-2 bg-gray-50 border rounded">
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1">
-                          <p className="font-medium">{paro.nivel1}</p>
-                          {paro.nivel2 && <p className="text-sm text-gray-600">{paro.nivel2}</p>}
-                          {paro.nivel3 && <p className="text-sm text-gray-600">{paro.nivel3}</p>}
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{paro.duracion} min</p>
-                        </div>
-                        <div className="ml-2">
-                          <button 
-                            className="text-red-500 p-1 hover:bg-red-50 rounded"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div className="mt-6 flex justify-between">
               <button 

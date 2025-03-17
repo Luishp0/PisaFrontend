@@ -1,6 +1,6 @@
 import React from 'react';
 import NavbarUsuario from '../components/NavbarUsuario';
-import CapturaIndicadores from './CapturaIndicadores';
+import CapturaIndicadores from '../pages/capturar/CapturaIndicadores.jsx';
 
 const PaginaUsuario = () => {
   return (
