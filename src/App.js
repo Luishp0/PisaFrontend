@@ -10,25 +10,29 @@ import EditarIndicador from './pages/EditarIndicador.jsx';
 import ReportBoard1 from './pages/ReportBoard1.jsx';
 import ReportCompliance from './pages/ReportCompliance.jsx';
 import Grafica1 from './pages/Grafica1.jsx';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
-    <NotificationProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LoginPage />} />
-          <Route path='/inicio' element={<PaginaPrincipal/>} />
-          <Route path='/usuario' element= {<UserManagement/>} />
-          <Route path='/usuarioRegistrado' element= {<RegisterForm/>} />
-          <Route path='/paginaUsuario' element= {<PaginaUsuario/>} />
-          <Route path='/editarIndicadores' element= {<EditarIndicador/>} />
-          <Route path='/reporte1' element= {<ReportBoard1/>} />
-          <Route path='/reporte2' element= {<ReportCompliance/>} />
-          <Route path='/reporte3' element= {<Grafica1/>} />
-          
-        </Routes>
-      </BrowserRouter>
-    </NotificationProvider>
+    <AuthProvider>
+      <NotificationProvider>
+        <BrowserRouter>
+        
+          <Routes>
+            <Route path="/" element={<LoginPage />} />
+            <Route path='/inicio' element={<PaginaPrincipal/>} />
+            <Route path='/usuario' element= {<UserManagement/>} />
+            <Route path='/usuarioRegistrado' element= {<RegisterForm/>} />
+            <Route path='/paginaUsuario' element= {<PaginaUsuario/>} />
+            <Route path='/editarIndicadores' element= {<EditarIndicador/>} />
+            <Route path='/reporte1' element= {<ReportBoard1/>} />
+            <Route path='/reporte2' element= {<ReportCompliance/>} />
+            <Route path='/reporte3' element= {<Grafica1/>} />
+            
+          </Routes>
+        </BrowserRouter>
+      </NotificationProvider>
+    </AuthProvider>
   );
 }
 

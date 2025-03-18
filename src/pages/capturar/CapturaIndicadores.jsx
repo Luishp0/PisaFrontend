@@ -14,6 +14,7 @@ const CapturaIndicadores = () => {
         <DatosIndicador />
         <Rechazos />
         <Paros />
+        
       </div>
     </div>
   );

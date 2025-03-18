@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, AlertCircle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../components/NotificationProvider.jsx';
+import { useAuth } from '../context/AuthContext'; // Importar el contexto
 import mejoraContinua from '../img/mejoraContinua.png';
 import pisaIcono from '../img/pisaIcono.png';
 
@@ -13,7 +14,8 @@ const LoginPage = () => {
   const [loginError, setLoginError] = useState(null);
   const [intentosRestantes, setIntentosRestantes] = useState(null);
   const navigate = useNavigate();
-  const { showError, showSuccess, showWarning} = useNotification();
+  const { showError, showSuccess, showWarning } = useNotification();
+  const { login } = useAuth(); // Usar el hook de autenticación
 
   // Obteniendo la URL base de la API desde las variables de entorno
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -45,24 +47,18 @@ const LoginPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Guardar el token en localStorage
-        localStorage.setItem('token', data.token);
-        
-        // Guardar información del usuario si está disponible
-        if (data.user) {
-          localStorage.setItem('userData', JSON.stringify(data.user));
-        }
+        // Usar el método login del contexto en lugar de guardar manualmente en localStorage
+        login(data.user, data.token);
         
         // Mostrar notificación de éxito
         showSuccess('¡Bienvenido! Inicio de sesión exitoso');
         
         // Redirigir según el rol
         setTimeout(() => {
-          // Redirección basada en el rol del usuario
           if (data.user && data.user.idRol) {
             switch(data.user.idRol) {
               case '67b3ef205de7d75b4cd02e5d': // Usuario
-                navigate('/usuario2');
+                navigate('/paginaUsuario');
                 break;
               case '67b3ee195de7d75b4cd02e56': // Administrador
                 navigate('/inicio');
