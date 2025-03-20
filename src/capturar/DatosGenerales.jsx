@@ -56,7 +56,7 @@ const DatosGenerales = () => {
       try {
         setLoading(prev => ({ ...prev, [tipoEstado]: true }));
         
-        console.log(`Fetching: ${API_URL}${endpoint}`);
+        
         const response = await fetch(`${API_URL}${endpoint}`);
         
         if (!response.ok) {
@@ -64,7 +64,7 @@ const DatosGenerales = () => {
         }
         
         const data = await response.json();
-        console.log(`Data from ${endpoint}:`, data);
+        
         setCatalogo(data);
         setErrores(prev => ({ ...prev, [tipoEstado]: null }));
       } catch (err) {

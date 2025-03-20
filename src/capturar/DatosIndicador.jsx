@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronDown, Info, Save, Beaker } from 'lucide-react';
+import { ChevronDown, Info, Save, Beaker } from 'lucide-react';
 import { useAuth } from '../context/AuthContext'; // Ajusta la ruta según tu estructura de proyecto
 
 const DatosIndicador = () => {
@@ -95,7 +95,6 @@ const DatosIndicador = () => {
         fechaHora: fechaHora.toISOString(),
         piezasProduccidas: parseInt(formData.piezasProducidas),
         ciclo: parseInt(formData.ciclo),
-        turnoId: formData.turno,
         usuario: user._id // Añadimos el ID del usuario autenticado
       };
 
@@ -115,20 +114,32 @@ const DatosIndicador = () => {
       
       const produccionGuardada = await produccionResponse.json();
       
+      
+      // Modifica esta sección dentro de tu función handleSubmit
+
+     // Modifica esta sección dentro de tu función handleSubmit
+
       // 2. Luego guardar el turno con referencia a la producción
       const turnoSeleccionado = turnos.find(t => t._id === formData.turno);
       
-      if (turnoSeleccionado && produccionGuardada._id) {
+
+      // Verificar la estructura de la respuesta y obtener el ID de producción correctamente
+      const produccionId = produccionGuardada && produccionGuardada.produccion && produccionGuardada.produccion._id;
+
+
+      if (turnoSeleccionado && produccionId) {
         const turnoData = {
-          produccion: produccionGuardada._id, // Campo requerido: referencia a la producción
+          produccion: produccionId, // Usamos el ID correcto de la estructura de respuesta
           nombreTurno: turnoSeleccionado.nombreTurnoCatalogo
         };
+        
+        console.log("Datos de turno a enviar:", turnoData);
         
         const turnoResponse = await fetch(`${apiUrl}/turno`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}` // Añadimos el token para autorización
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify(turnoData),
         });
@@ -137,6 +148,9 @@ const DatosIndicador = () => {
           const errorData = await turnoResponse.json();
           throw new Error(errorData.message || `Error al guardar turno: ${turnoResponse.status}`);
         }
+        
+        const turnoGuardado = await turnoResponse.json();
+        console.log("Turno guardado correctamente:", turnoGuardado);
       } else {
         throw new Error('No se pudo crear el turno porque falta la referencia a producción o el turno seleccionado');
       }
