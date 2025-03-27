@@ -226,14 +226,7 @@ const DatosGenerales = () => {
     <div className="mb-4">
       <div className="bg-blue-600 text-white py-2 px-4 font-semibold rounded-t-md flex justify-between items-center">
         <span>Datos generales</span>
-        <button 
-          className="bg-white text-blue-600 px-3 py-1 rounded text-sm flex items-center"
-          onClick={guardarDatos}
-          disabled={guardando}
-        >
-          <Save size={16} className="mr-1" />
-          {guardando ? 'Guardando...' : 'Guardar'}
-        </button>
+        
       </div>
       
       {mensaje.texto && (
