@@ -14,6 +14,7 @@ const CapturaIndicadoresContent = () => {
   
   const indicadorRef = React.useRef();
   const generalesRef = React.useRef();
+  const rechazosRef = React.useRef();
 
   // Este efecto se activará cuando el ID de producción cambie
   useEffect(() => {
@@ -58,6 +59,12 @@ const CapturaIndicadoresContent = () => {
         console.log('Guardando datos del indicador...');
         const event = new Event('submit', { cancelable: true });
         await indicadorRef.current.handleSubmit(event);
+        
+        // Ahora guardamos los rechazos si hay una función para ello
+        if (rechazosRef.current && rechazosRef.current.guardarRechazos) {
+          console.log('Guardando datos de rechazos...');
+          await rechazosRef.current.guardarRechazos();
+        }
       }
     } catch (error) {
       console.error('Error en el proceso de guardado:', error);
@@ -102,7 +109,7 @@ const CapturaIndicadoresContent = () => {
          <DatosGenerales ref={generalesRef} />
         <DatosIndicador ref={indicadorRef} />
        
-        <Rechazos />
+        <Rechazos ref={rechazosRef} />
         <Paros />
       </div>
     </div>

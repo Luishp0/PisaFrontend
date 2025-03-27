@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { ChevronDown, Plus, Trash2, Edit2, Check, X, AlertCircle, Info } from 'lucide-react';
 import { useProduccion } from '../context/ProduccionContext'; // Ajusta la ruta según tu estructura
 
-const Rechazos = () => {
+const Rechazos = forwardRef((props, ref) => {
   const { 
     produccionId, 
     produccionData, 
@@ -26,6 +26,11 @@ const Rechazos = () => {
   const [piezasFaltantes, setPiezasFaltantes] = useState(0);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+  // Exponemos la función guardarRechazos para que pueda ser llamada desde el componente padre
+  useImperativeHandle(ref, () => ({
+    guardarRechazos
+  }));
 
   // Calcular las piezas faltantes basadas en la producción y velocidad nominal
   useEffect(() => {
@@ -146,6 +151,8 @@ const Rechazos = () => {
         id: selectedRechazo,
         nombre: rechazoSeleccionado.nombreRechazoCatalogo,
         cantidad,
+        // Guardamos también el nombre para poder enviarlo en la petición
+        nombreParaEnvio: rechazoSeleccionado.nombreRechazoCatalogo
       };
 
       setRechazosAgregados([...rechazosAgregados, nuevoRechazo]);
@@ -171,7 +178,9 @@ const Rechazos = () => {
     const updatedRechazos = [...rechazosAgregados];
     updatedRechazos[index] = {
       ...updatedRechazos[index],
-      cantidad: editCantidad
+      cantidad: editCantidad,
+      // Aseguramos que si se edita un rechazo antiguo, tenga la propiedad nombreParaEnvio
+      nombreParaEnvio: updatedRechazos[index].nombreParaEnvio || updatedRechazos[index].nombre
     };
 
     setRechazosAgregados(updatedRechazos);
@@ -193,23 +202,20 @@ const Rechazos = () => {
   };
 
   // Enviar los rechazos al servidor
-  const handleGuardarRechazos = async () => {
+  const guardarRechazos = async () => {
     // Validar que hay una producción activa
     if (!produccionId) {
-      setMensaje({
-        texto: 'Error: Debes guardar los datos de producción primero.',
-        tipo: 'error'
-      });
-      return;
+      console.log('Error: No hay producción activa para guardar rechazos');
+      return {
+        success: false, 
+        message: 'Error: Debes guardar los datos de producción primero.'
+      };
     }
 
     // Validar que hay rechazos para guardar
     if (rechazosAgregados.length === 0) {
-      setMensaje({
-        texto: 'Error: No hay rechazos para guardar.',
-        tipo: 'error'
-      });
-      return;
+      console.log('No hay rechazos para guardar');
+      return { success: true, message: 'No hay rechazos para guardar.' };
     }
 
     setGuardando(true);
@@ -220,8 +226,8 @@ const Rechazos = () => {
       for (const rechazo of rechazosAgregados) {
         const rechazoData = {
           produccion: produccionId,
-          tipoRechazo: rechazo.id,
-          cantidadRechazo: rechazo.cantidad
+          nombreRechazo: rechazo.nombreParaEnvio || rechazo.nombre, // Enviamos el nombre en lugar del ID
+          cantidad: rechazo.cantidad
         };
 
         console.log('Enviando rechazo:', rechazoData);
@@ -248,6 +254,8 @@ const Rechazos = () => {
 
       // Resetear la lista de rechazos después de guardar
       setRechazosAgregados([]);
+      
+      return { success: true, message: 'Rechazos guardados correctamente' };
 
     } catch (err) {
       console.error("Error al guardar rechazos:", err);
@@ -255,6 +263,11 @@ const Rechazos = () => {
         texto: err.message || 'Error al guardar los rechazos. Intente nuevamente.',
         tipo: 'error'
       });
+      
+      return { 
+        success: false, 
+        message: err.message || 'Error al guardar los rechazos. Intente nuevamente.' 
+      };
     } finally {
       setGuardando(false);
     }
@@ -295,14 +308,7 @@ const Rechazos = () => {
                 )}
               </div>
             </div>
-          ) : (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded flex items-start">
-              <Info className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-              <p className="text-green-700">
-                La producción ha alcanzado o superado la capacidad nominal.
-              </p>
-            </div>
-          )
+          ) : null
         ) : (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded flex items-start">
             <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
@@ -453,17 +459,7 @@ const Rechazos = () => {
                   </span>
                 )}
               </div>
-              <button
-                className={`px-4 py-2 rounded flex items-center transition-colors ${
-                  rechazosAgregados.length === 0 || guardando || !produccionId ? 
-                  'bg-green-300 cursor-not-allowed text-white' : 
-                  'bg-green-600 text-white hover:bg-green-700'
-                }`}
-                onClick={handleGuardarRechazos}
-                disabled={rechazosAgregados.length === 0 || guardando || !produccionId}
-              >
-                {guardando ? 'Guardando...' : 'Guardar Rechazos'}
-              </button>
+              {/* Se ha eliminado el botón de guardar rechazos de este componente */}
             </div>
           </div>
         )}
@@ -479,6 +475,6 @@ const Rechazos = () => {
       </div>
     </div>
   );
-};
+});
 
 export default Rechazos;
