@@ -99,9 +99,9 @@ const CapturaIndicadoresContent = () => {
             {mensaje.texto}
           </div>
         )}
-
+         <DatosGenerales ref={generalesRef} />
         <DatosIndicador ref={indicadorRef} />
-        <DatosGenerales ref={generalesRef} />
+       
         <Rechazos />
         <Paros />
       </div>

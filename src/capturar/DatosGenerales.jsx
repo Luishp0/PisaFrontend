@@ -8,7 +8,7 @@ const DatosGenerales = forwardRef((props, ref) => {
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
   const { user } = useAuth();
-  const { produccionId } = useProduccion();
+  const { produccionId, actualizarMaterial } = useProduccion(); // Añadimos actualizarMaterial
   
   // Estados para almacenar los datos de los catálogos
   const [centros, setCentros] = useState([]);
@@ -213,6 +213,13 @@ const DatosGenerales = forwardRef((props, ref) => {
         // Siempre cargar la velocidad del material, incluso si es 0 o vacía
         const velocidadMaterial = materialSeleccionado.velocidadNominal?.toString() || '';
         
+        // Actualizar el contexto con el material seleccionado
+        actualizarMaterial(
+          materialSeleccionado._id,
+          materialSeleccionado.nombreMaterialCatalogo,
+          materialSeleccionado.velocidadNominal || 0
+        );
+        
         setFormData({
           ...formData,
           [name]: value,
@@ -226,6 +233,9 @@ const DatosGenerales = forwardRef((props, ref) => {
           velocidad: true
         }));
       } else {
+        // Si no hay material seleccionado, actualizar el contexto con valores vacíos
+        actualizarMaterial('', '', 0);
+        
         setFormData({
           ...formData,
           [name]: value,
@@ -342,7 +352,7 @@ const DatosGenerales = forwardRef((props, ref) => {
         const datosMaterial = {
           produccion: produccionId,
           nombreMaterial: materiales.find(m => m._id === formData.material)?.nombreMaterialCatalogo || '',
-          lote: formData.lote ? Number(formData.lote) : 0,
+          lote: formData.lote,
           orden: formData.orden ? Number(formData.orden) : 0,
           descripcionMaterial: formData.descripcionMaterial,
           velocidadNominal: formData.velocidad ? Number(formData.velocidad) : 0
@@ -433,6 +443,9 @@ const DatosGenerales = forwardRef((props, ref) => {
         velocidad: '',
         descripcionMaterial: ''
       });
+      
+      // Actualizar el contexto con valores vacíos
+      actualizarMaterial('', '', 0);
 
     } catch (error) {
       setMensaje({
