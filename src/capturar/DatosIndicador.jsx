@@ -5,7 +5,12 @@ import { useProduccion } from '../context/ProduccionContext.jsx';
 
 const DatosIndicador = forwardRef((props, ref) => {
   const { user } = useAuth(); // Obtenemos el usuario del contexto de autenticación
-  const { actualizarProduccion, produccionData, materialSeleccionado } = useProduccion(); // Obtenemos el material del contexto
+  const { 
+    actualizarProduccion, 
+    produccionData, 
+    materialSeleccionado,
+    actualizarPiezasTemp
+  } = useProduccion(); // Obtenemos el material del contexto y la función para actualizar piezas temporales
 
   const [turnos, setTurnos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +116,9 @@ const DatosIndicador = forwardRef((props, ref) => {
         minutosFaltantes: minutosFaltantes,
         tipo: porcentaje >= 100 ? 'success' : 'warning'
       });
+      
+      // Actualizar el contexto con los datos temporales para que el componente de Rechazos pueda acceder a ellos
+      actualizarPiezasTemp(formData.piezasProducidas, formData.ciclo);
     } else {
       setComparacionVelocidad({
         mostrar: false,
@@ -119,8 +127,13 @@ const DatosIndicador = forwardRef((props, ref) => {
         minutosFaltantes: 0,
         tipo: ''
       });
+      
+      // Si no hay piezas producidas, limpiar los datos temporales del contexto
+      if (!formData.piezasProducidas) {
+        actualizarPiezasTemp(null, null);
+      }
     }
-  }, [formData.piezasProducidas, formData.ciclo, materialSeleccionado]);
+  }, [formData.piezasProducidas, formData.ciclo, materialSeleccionado, actualizarPiezasTemp]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -189,9 +202,9 @@ const DatosIndicador = forwardRef((props, ref) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // Añadimos el token para autorización
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(produccionData),
+        body: JSON.stringify(produccionData)
       });
 
       if (!produccionResponse.ok) {
@@ -468,17 +481,20 @@ const DatosIndicador = forwardRef((props, ref) => {
           </div>
         )}
 
-        {/* Mensaje actualizado sobre tiempo a capturar como paros */}
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded flex items-start">
-          <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-          <p className="text-blue-700">
-            {comparacionVelocidad.mostrar && comparacionVelocidad.tipo === 'warning' ? (
-              <>Debes capturar lo equivalente a <span className="font-bold">{comparacionVelocidad.minutosFaltantes}</span> minutos de paros</>
-            ) : (
-              <>Debes capturar lo equivalente a <span className="font-bold">{formData.ciclo}</span> minutos de paros</>
-            )}
-          </p>
-        </div>
+        {/* Mensaje actualizado sobre tiempo a capturar como paros o rechazos */}
+        {comparacionVelocidad.mostrar && comparacionVelocidad.tipo === 'warning' && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded flex items-start">
+            <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
+            <div>
+              <p className="text-blue-700">
+                Puedes registrar las <span className="font-bold">{comparacionVelocidad.faltanCapturar}</span> piezas faltantes como rechazos en la sección de Rechazos.
+              </p>
+              <p className="text-blue-700 mt-1">
+                O registrar lo equivalente a <span className="font-bold">{comparacionVelocidad.minutosFaltantes}</span> minutos de paros.
+              </p>
+            </div>
+          </div>
+        )}
 
         {mensaje.texto && (
           <div className={`mt-4 p-3 rounded flex items-start ${

@@ -23,6 +23,10 @@ export const ProduccionProvider = ({ children }) => {
   // Estado para controlar si el proceso de guardado está completo
   const [guardadoCompleto, setGuardadoCompleto] = useState(false);
   
+  // Estado para datos temporales de producción (para comunicación entre componentes sin guardar)
+  const [piezasProducidasTemp, setPiezasProducidasTemp] = useState(null);
+  const [cicloTemp, setCicloTemp] = useState(null);
+  
   // Estado para el material seleccionado
   const [materialSeleccionado, setMaterialSeleccionado] = useState({
     id: '',
@@ -38,6 +42,13 @@ export const ProduccionProvider = ({ children }) => {
       nombre,
       velocidadNominal: Number(velocidadNominal) || 0
     });
+  };
+
+  // Función para actualizar los datos temporales de piezas producidas y ciclo
+  const actualizarPiezasTemp = (piezas, ciclo) => {
+    console.log('Actualizando datos temporales:', { piezas, ciclo });
+    setPiezasProducidasTemp(piezas);
+    setCicloTemp(ciclo);
   };
 
   // Función para actualizar el ID y los datos de producción
@@ -62,9 +73,12 @@ export const ProduccionProvider = ({ children }) => {
     produccionData,
     guardadoCompleto,
     materialSeleccionado,
+    piezasProducidasTemp,
+    cicloTemp,
     actualizarProduccion,
     resetearProduccion,
-    actualizarMaterial
+    actualizarMaterial,
+    actualizarPiezasTemp
   };
 
   return (

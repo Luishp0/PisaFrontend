@@ -6,7 +6,9 @@ const Rechazos = () => {
   const { 
     produccionId, 
     produccionData, 
-    materialSeleccionado 
+    materialSeleccionado,
+    piezasProducidasTemp,
+    cicloTemp
   } = useProduccion();
 
   const [catalogoRechazos, setCatalogoRechazos] = useState([]);
@@ -27,11 +29,19 @@ const Rechazos = () => {
 
   // Calcular las piezas faltantes basadas en la producción y velocidad nominal
   useEffect(() => {
-    if (produccionData && materialSeleccionado && materialSeleccionado.velocidadNominal > 0) {
-      // Obtener las piezas producidas y el ciclo de producción desde el contexto
-      const piezasProducidas = produccionData?.piezasProduccidas || 0;
-      const ciclo = produccionData?.ciclo || 60; // Valor predeterminado de 60 minutos
-      
+    // Usamos los datos temporales si están disponibles, o los datos guardados de lo contrario
+    const usePiezasTemp = piezasProducidasTemp !== null && piezasProducidasTemp !== undefined;
+    const useCicloTemp = cicloTemp !== null && cicloTemp !== undefined;
+    
+    const piezasProducidas = usePiezasTemp 
+      ? parseInt(piezasProducidasTemp) 
+      : (produccionData?.piezasProduccidas || 0);
+
+    const ciclo = useCicloTemp 
+      ? parseInt(cicloTemp) 
+      : (produccionData?.ciclo || 60);
+    
+    if ((usePiezasTemp || produccionData) && materialSeleccionado && materialSeleccionado.velocidadNominal > 0) {
       // Calcular las piezas esperadas según la velocidad nominal y el ciclo
       const factorCiclo = ciclo / 60;
       const piezasEsperadas = Math.round(materialSeleccionado.velocidadNominal * factorCiclo);
@@ -45,12 +55,14 @@ const Rechazos = () => {
         ciclo,
         velocidadNominal: materialSeleccionado.velocidadNominal,
         piezasEsperadas,
-        faltantes
+        faltantes,
+        usePiezasTemp,
+        useCicloTemp
       });
     } else {
       setPiezasFaltantes(0);
     }
-  }, [produccionData, materialSeleccionado]);
+  }, [produccionData, materialSeleccionado, piezasProducidasTemp, cicloTemp]);
 
   // Actualizar total de rechazos cuando cambia la lista
   useEffect(() => {
@@ -248,6 +260,19 @@ const Rechazos = () => {
     }
   };
 
+  // Verificar si hay datos temporales o guardados para mostrar la sección de rechazos
+  const hayDatosDisponibles = () => {
+    return (piezasProducidasTemp !== null && piezasProducidasTemp !== undefined && 
+            materialSeleccionado && materialSeleccionado.id) || 
+            produccionId;
+  };
+
+  // Determinar el porcentaje de cumplimiento para mostrar en la interfaz
+  const calcularPorcentajeCumplimiento = () => {
+    if (piezasFaltantes <= 0 || totalRechazos <= 0) return 0;
+    return Math.round((totalRechazos / piezasFaltantes) * 100);
+  };
+
   return (
     <div className="mb-4">
       <div className="bg-blue-600 text-white py-2 px-4 font-semibold rounded-t-md">
@@ -255,7 +280,7 @@ const Rechazos = () => {
       </div>
       <div className="bg-white p-4 border border-gray-300 rounded-b-md">
         {/* Información de piezas faltantes */}
-        {produccionId ? (
+        {hayDatosDisponibles() ? (
           piezasFaltantes > 0 ? (
             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded flex items-start">
               <AlertCircle className="h-5 w-5 text-yellow-500 mr-2 mt-0.5" />
@@ -263,24 +288,26 @@ const Rechazos = () => {
                 <p className="text-yellow-700 font-medium">
                   Faltan {piezasFaltantes} piezas para alcanzar el 100% de producción nominal
                 </p>
-                <p className="text-yellow-600 text-sm mt-1">
-                  Has registrado {totalRechazos} de {piezasFaltantes} piezas como rechazos ({Math.round((totalRechazos / piezasFaltantes) * 100)}%)
-                </p>
+                {totalRechazos > 0 && (
+                  <p className="text-yellow-600 text-sm mt-1">
+                    Has registrado {totalRechazos} de {piezasFaltantes} piezas como rechazos ({calcularPorcentajeCumplimiento()}%)
+                  </p>
+                )}
               </div>
             </div>
           ) : (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded flex items-start">
               <Info className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
               <p className="text-green-700">
-                La producción ha alcanzado o superado la capacidad nominal. No es necesario registrar rechazos.
+                La producción ha alcanzado o superado la capacidad nominal.
               </p>
             </div>
           )
         ) : (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded flex items-start">
-            <AlertCircle className="h-5 w-5 text-yellow-500 mr-2 mt-0.5" />
-            <p className="text-yellow-700">
-              Primero debes guardar los datos de producción para poder registrar rechazos.
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded flex items-start">
+            <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
+            <p className="text-blue-700">
+              Ingresa las piezas producidas en la sección de Datos de Indicador para calcular los rechazos.
             </p>
           </div>
         )}
@@ -303,7 +330,7 @@ const Rechazos = () => {
                 name="tipo"
                 value={selectedRechazo}
                 onChange={handleRechazoChange}
-                disabled={loading || !produccionId}
+                disabled={loading || (!hayDatosDisponibles())}
               >
                 <option value="">Seleccionar rechazo...</option>
                 {catalogoRechazos.map((rechazo) => (
@@ -324,14 +351,18 @@ const Rechazos = () => {
               min="1"
               value={cantidad}
               onChange={handleCantidadChange}
-              disabled={!produccionId}
+              disabled={!hayDatosDisponibles()}
             />
           </div>
           <div className="w-1/6 pl-2 flex justify-center">
             <button
-              className="bg-blue-600 text-white px-4 py-2 rounded flex items-center hover:bg-blue-700 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+              className={`px-4 py-2 rounded flex items-center transition-colors ${
+                !hayDatosDisponibles() ? 
+                'bg-blue-300 cursor-not-allowed text-white' : 
+                'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
               onClick={handleAgregarRechazo}
-              disabled={!produccionId}
+              disabled={!hayDatosDisponibles()}
             >
               <Plus className="h-4 w-4 mr-1" /> Agregar
             </button>
@@ -418,14 +449,18 @@ const Rechazos = () => {
                 <span>{totalRechazos}</span>
                 {piezasFaltantes > 0 && (
                   <span className="ml-2 text-sm">
-                    ({Math.round((totalRechazos / piezasFaltantes) * 100)}% de las piezas faltantes)
+                    ({calcularPorcentajeCumplimiento()}% de las piezas faltantes)
                   </span>
                 )}
               </div>
               <button
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors flex items-center disabled:bg-green-300 disabled:cursor-not-allowed"
+                className={`px-4 py-2 rounded flex items-center transition-colors ${
+                  rechazosAgregados.length === 0 || guardando || !produccionId ? 
+                  'bg-green-300 cursor-not-allowed text-white' : 
+                  'bg-green-600 text-white hover:bg-green-700'
+                }`}
                 onClick={handleGuardarRechazos}
-                disabled={rechazosAgregados.length === 0 || guardando}
+                disabled={rechazosAgregados.length === 0 || guardando || !produccionId}
               >
                 {guardando ? 'Guardando...' : 'Guardar Rechazos'}
               </button>
