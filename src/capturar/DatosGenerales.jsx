@@ -153,8 +153,9 @@ const DatosGenerales = forwardRef((props, ref) => {
         }
         break;
       case 'lote':
-        if (value && (isNaN(value) || value <= 0)) {
-          return 'Debe ser un número positivo';
+        // El lote puede tener letras y números, solo validamos que no esté vacío
+        if (value && value.trim() === '') {
+          return 'El lote no puede estar vacío';
         }
         break;
       case 'velocidad':
@@ -205,20 +206,31 @@ const DatosGenerales = forwardRef((props, ref) => {
       [name]: true
     }));
     
-    // Si es el cambio de material, actualizar también la descripción
+    // Si es el cambio de material, actualizar también la descripción y la velocidad
     if (name === 'material' && value) {
       const materialSeleccionado = materiales.find(material => material._id === value);
       if (materialSeleccionado) {
+        // Siempre cargar la velocidad del material, incluso si es 0 o vacía
+        const velocidadMaterial = materialSeleccionado.velocidadNominal?.toString() || '';
+        
         setFormData({
           ...formData,
           [name]: value,
-          descripcionMaterial: materialSeleccionado.descripcionMaterial || ''
+          descripcionMaterial: materialSeleccionado.descripcionMaterial || '',
+          velocidad: velocidadMaterial // Cargar la velocidad del material siempre
         });
+        
+        // Siempre marcar velocidad como tocado cuando se cambia el material
+        setTouched(prev => ({
+          ...prev,
+          velocidad: true
+        }));
       } else {
         setFormData({
           ...formData,
           [name]: value,
-          descripcionMaterial: ''
+          descripcionMaterial: '',
+          velocidad: '' // Limpiar la velocidad si no hay material seleccionado
         });
       }
     } else {
@@ -663,36 +675,13 @@ const DatosGenerales = forwardRef((props, ref) => {
                   value={formData.lote}
                   onChange={handleInputChange}
                   onBlur={handleBlur}
-                  placeholder="Número de lote"
+                  placeholder="Código de lote (números y letras)"
                 />
                 {isFieldValid('lote') && (
                   <CheckCircle className="absolute right-2 top-3 h-4 w-4 text-green-500" />
                 )}
               </div>
               {renderFieldError('lote')}
-            </div>
-
-            {/* Velocidad */}
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Velocidad
-                {requiredFields.velocidad && <span className="text-red-500 ml-1">*</span>}
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  className={getFieldClasses('velocidad')}
-                  name="velocidad"
-                  value={formData.velocidad}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                  placeholder="Velocidad"
-                />
-                {isFieldValid('velocidad') && (
-                  <CheckCircle className="absolute right-2 top-3 h-4 w-4 text-green-500" />
-                )}
-              </div>
-              {renderFieldError('velocidad')}
             </div>
 
             {/* Material */}
@@ -730,6 +719,29 @@ const DatosGenerales = forwardRef((props, ref) => {
               </div>
               {renderFieldError('material')}
               {errores.materiales && <p className="text-red-500 text-xs mt-1">{errores.materiales}</p>}
+            </div>
+
+            {/* Velocidad */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">
+                Velocidad
+                {requiredFields.velocidad && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  className={getFieldClasses('velocidad')}
+                  name="velocidad"
+                  value={formData.velocidad}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  placeholder="Velocidad"
+                />
+                {isFieldValid('velocidad') && (
+                  <CheckCircle className="absolute right-2 top-3 h-4 w-4 text-green-500" />
+                )}
+              </div>
+              {renderFieldError('velocidad')}
             </div>
           </div>
         </div>
