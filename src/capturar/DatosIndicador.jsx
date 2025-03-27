@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, Info, Save, Beaker } from 'lucide-react';
+import React, { useState, useEffect, forwardRef } from 'react';
+import { ChevronDown, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext'; // Ajusta la ruta según tu estructura de proyecto
+import { useProduccion } from '../context/ProduccionContext.jsx';
 
-const DatosIndicador = () => {
+const DatosIndicador = forwardRef((props, ref) => {
   const { user } = useAuth(); // Obtenemos el usuario del contexto de autenticación
+  const { actualizarProduccion } = useProduccion();
+
   const [turnos, setTurnos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,6 +20,11 @@ const DatosIndicador = () => {
     ciclo: '60',
     turno: ''
   });
+
+  // Exponer handleSubmit a través de la ref
+  React.useImperativeHandle(ref, () => ({
+    handleSubmit
+  }));
 
   useEffect(() => {
     const fetchTurnos = async () => {
@@ -51,25 +59,6 @@ const DatosIndicador = () => {
     }));
   };
 
-  const handleTestData = () => {
-    // Si hay turnos disponibles, seleccionar el primero
-    const primerTurnoId = turnos.length > 0 ? turnos[0]._id : '';
-    
-    setFormData({
-      piezasProducidas: '100',
-      fecha: new Date().toISOString().split('T')[0],
-      hora: '10',
-      minuto: '30',
-      ciclo: '30',
-      turno: primerTurnoId
-    });
-    
-    setMensaje({
-      texto: 'Datos de prueba cargados. Haga clic en Guardar para enviar.',
-      tipo: 'success'
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -98,6 +87,8 @@ const DatosIndicador = () => {
         usuario: user._id // Añadimos el ID del usuario autenticado
       };
 
+      console.log("Enviando datos de producción:", produccionData);
+
       const produccionResponse = await fetch(`${apiUrl}/produccion`, {
         method: 'POST',
         headers: {
@@ -113,23 +104,29 @@ const DatosIndicador = () => {
       }
       
       const produccionGuardada = await produccionResponse.json();
+      console.log('Producción guardada:', produccionGuardada);
       
+      // Extraer el ID de producción correctamente según la estructura de respuesta
+      let produccionId;
       
-      // Modifica esta sección dentro de tu función handleSubmit
-
-     // Modifica esta sección dentro de tu función handleSubmit
-
+      // Verificar la estructura de la respuesta
+      if (produccionGuardada._id) {
+        produccionId = produccionGuardada._id;
+      } else if (produccionGuardada.produccion && produccionGuardada.produccion._id) {
+        produccionId = produccionGuardada.produccion._id;
+      } else {
+        throw new Error('No se pudo obtener el ID de producción');
+      }
+      
+      // Actualizar el contexto con el ID de producción
+      actualizarProduccion(produccionId, produccionGuardada);
+      
       // 2. Luego guardar el turno con referencia a la producción
       const turnoSeleccionado = turnos.find(t => t._id === formData.turno);
       
-
-      // Verificar la estructura de la respuesta y obtener el ID de producción correctamente
-      const produccionId = produccionGuardada && produccionGuardada.produccion && produccionGuardada.produccion._id;
-
-
       if (turnoSeleccionado && produccionId) {
         const turnoData = {
-          produccion: produccionId, // Usamos el ID correcto de la estructura de respuesta
+          produccion: produccionId,
           nombreTurno: turnoSeleccionado.nombreTurnoCatalogo
         };
         
@@ -172,6 +169,8 @@ const DatosIndicador = () => {
         texto: err.message || 'Error al guardar los datos. Intente nuevamente.',
         tipo: 'error'
       });
+      // Si ocurre un error, también debemos reiniciar el proceso
+      actualizarProduccion(null, null);
     } finally {
       setGuardando(false);
     }
@@ -327,32 +326,9 @@ const DatosIndicador = () => {
             <p>{mensaje.texto}</p>
           </div>
         )}
-
-        <div className="mt-4 flex justify-between">
-          <button
-            type="button"
-            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-            onClick={handleTestData}
-            disabled={loading || turnos.length === 0}
-          >
-            <Beaker className="h-4 w-4" />
-            Cargar Datos de Prueba
-          </button>
-          
-          <button
-            type="submit"
-            className={`flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 ${
-              guardando ? 'opacity-70 cursor-not-allowed' : ''
-            }`}
-            disabled={guardando || loading}
-          >
-            <Save className="h-4 w-4" />
-            {guardando ? 'Guardando...' : 'Guardar'}
-          </button>
-        </div>
       </div>
     </form>
   );
-};
+});
 
 export default DatosIndicador;
