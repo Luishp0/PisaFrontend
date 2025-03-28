@@ -9,7 +9,7 @@ const Paros = () => {
       </div>
       <div className="bg-white p-4 border border-gray-300 rounded-b-md">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mb-4">
-          {[1, 2, 3, 4, 5].map((nivel) => (
+          {[1, 2, 3, 4].map((nivel) => (
             <div 
               key={nivel} 
               className="border border-gray-300 rounded"
@@ -47,18 +47,7 @@ const Paros = () => {
           </button>
         </div>
 
-        <div className="mt-6 flex justify-between">
-          <button 
-            className="bg-blue-600 text-white px-6 py-2 rounded"
-          >
-            Guardar
-          </button>
-          <button 
-            className="bg-gray-500 text-white px-6 py-2 rounded"
-          >
-            Cancelar
-          </button>
-        </div>
+        
       </div>
     </div>
   );
