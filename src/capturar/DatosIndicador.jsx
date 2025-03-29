@@ -7,7 +7,7 @@ const DatosIndicador = forwardRef((props, ref) => {
   const { user } = useAuth(); // Obtenemos el usuario del contexto de autenticación
   const { 
     actualizarProduccion, 
-    produccionData, 
+     
     materialSeleccionado,
     actualizarPiezasTemp
   } = useProduccion(); // Obtenemos el material del contexto y la función para actualizar piezas temporales

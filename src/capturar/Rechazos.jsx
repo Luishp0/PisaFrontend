@@ -20,7 +20,7 @@ const Rechazos = forwardRef((props, ref) => {
   const [validation, setValidation] = useState({ error: false, message: '' });
   const [editingIndex, setEditingIndex] = useState(null);
   const [editCantidad, setEditCantidad] = useState(0);
-  const [guardando, setGuardando] = useState(false);
+  const [ ,setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [totalRechazos, setTotalRechazos] = useState(0);
   const [piezasFaltantes, setPiezasFaltantes] = useState(0);
