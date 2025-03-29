@@ -7,9 +7,10 @@ const DatosIndicador = forwardRef((props, ref) => {
   const { user } = useAuth(); // Obtenemos el usuario del contexto de autenticación
   const { 
     actualizarProduccion, 
-     
     materialSeleccionado,
-    actualizarPiezasTemp
+    actualizarPiezasTemp,
+    actualizarComparacionVelocidad,
+    comparacionVelocidad: contextComparacionVelocidad  // Renombrado para evitar conflictos
   } = useProduccion(); // Obtenemos el material del contexto y la función para actualizar piezas temporales
 
   const [turnos, setTurnos] = useState([]);
@@ -18,8 +19,8 @@ const DatosIndicador = forwardRef((props, ref) => {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   
-  // Estado para la comparación con la velocidad nominal
-  const [comparacionVelocidad, setComparacionVelocidad] = useState({
+  // Estado SOLO para la visualización local - NO actualiza el contexto directamente
+  const [localComparacionVelocidad, setLocalComparacionVelocidad] = useState({
     mostrar: false,
     porcentaje: 0,
     faltanCapturar: 0,
@@ -40,6 +41,9 @@ const DatosIndicador = forwardRef((props, ref) => {
   
   const { hora: horaActual, minuto: minutoActual } = obtenerHoraMinutoActual();
   
+  // Valores predefinidos de ciclos disponibles (solo 30 y 60)
+  const ciclosDisponibles = [30, 60];
+
   const [formData, setFormData] = useState({
     piezasProducidas: '',
     fecha: fechaActual, // Inicializar con fecha actual del sistema
@@ -49,9 +53,15 @@ const DatosIndicador = forwardRef((props, ref) => {
     turno: ''
   });
 
-  // Exponer handleSubmit a través de la ref
+  // Debugging useEffect to check materialSeleccionado state
+  useEffect(() => {
+    console.log('Material en DatosIndicador:', materialSeleccionado);
+  }, [materialSeleccionado]);
+
+  // Exponer handleSubmit y limpiarFormulario a través de la ref
   React.useImperativeHandle(ref, () => ({
-    handleSubmit
+    handleSubmit,
+    limpiarFormulario
   }));
 
   useEffect(() => {
@@ -80,6 +90,7 @@ const DatosIndicador = forwardRef((props, ref) => {
   }, []);
 
   // Evaluar las piezas producidas en relación a la velocidad nominal del material seleccionado
+  // IMPORTANTE: Este efecto SOLO calcula los valores y actualiza el estado local
   useEffect(() => {
     // Verificar si tenemos un material seleccionado con velocidad nominal y piezas producidas
     if (formData.piezasProducidas && 
@@ -109,24 +120,29 @@ const DatosIndicador = forwardRef((props, ref) => {
       // minutosFaltantes = (piezasFaltantes / piezasPorHora) * 60 minutos
       const minutosFaltantes = Math.ceil((faltanCapturar / materialSeleccionado.velocidadNominal) * 60);
       
-      setComparacionVelocidad({
+      const nuevaComparacion = {
         mostrar: true,
         porcentaje: Math.round(porcentaje * 100) / 100, // Redondear a 2 decimales
         faltanCapturar: Math.ceil(faltanCapturar),
         minutosFaltantes: minutosFaltantes,
         tipo: porcentaje >= 100 ? 'success' : 'warning'
-      });
+      };
       
-      // Actualizar el contexto con los datos temporales para que el componente de Rechazos pueda acceder a ellos
+      // Solo actualizar el estado local
+      setLocalComparacionVelocidad(nuevaComparacion);
+      
+      // Actualizar el contexto con los datos temporales para que el componente de Rechazos y Paros pueda acceder a ellos
       actualizarPiezasTemp(formData.piezasProducidas, formData.ciclo);
     } else {
-      setComparacionVelocidad({
+      const nuevaComparacion = {
         mostrar: false,
         porcentaje: 0,
         faltanCapturar: 0,
         minutosFaltantes: 0,
         tipo: ''
-      });
+      };
+      
+      setLocalComparacionVelocidad(nuevaComparacion);
       
       // Si no hay piezas producidas, limpiar los datos temporales del contexto
       if (!formData.piezasProducidas) {
@@ -134,6 +150,15 @@ const DatosIndicador = forwardRef((props, ref) => {
       }
     }
   }, [formData.piezasProducidas, formData.ciclo, materialSeleccionado, actualizarPiezasTemp]);
+
+  // Efecto SEPARADO para actualizar el contexto solo cuando el estado local cambia
+  // Esto evita el bucle infinito
+  useEffect(() => {
+    // Comparamos si los valores son diferentes antes de actualizar el contexto
+    if (JSON.stringify(localComparacionVelocidad) !== JSON.stringify(contextComparacionVelocidad)) {
+      actualizarComparacionVelocidad(localComparacionVelocidad);
+    }
+  }, [localComparacionVelocidad, contextComparacionVelocidad, actualizarComparacionVelocidad]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -155,6 +180,36 @@ const DatosIndicador = forwardRef((props, ref) => {
   // Generar las opciones de minuto (solo 00 y 30)
   const opcionesMinuto = ["00", "30"];
 
+  // Limpiar el formulario después de guardar
+  const limpiarFormulario = () => {
+    // Obtener nuevos valores de hora/minuto actuales
+    const { hora: nuevaHora, minuto: nuevoMinuto } = obtenerHoraMinutoActual();
+    
+    setFormData({
+      piezasProducidas: '',
+      fecha: fechaActual, // Mantener la fecha actual
+      hora: nuevaHora,
+      minuto: nuevoMinuto,
+      ciclo: '60',
+      turno: ''
+    });
+    
+    // También limpiar la comparación de velocidad
+    const nuevaComparacion = {
+      mostrar: false,
+      porcentaje: 0,
+      faltanCapturar: 0,
+      minutosFaltantes: 0,
+      tipo: ''
+    };
+    
+    setLocalComparacionVelocidad(nuevaComparacion);
+    actualizarComparacionVelocidad(nuevaComparacion);
+    
+    // Limpiar los datos temporales del contexto
+    actualizarPiezasTemp(null, null);
+  };
+
   const handleSubmit = async (e) => {
     if (e) {
       e.preventDefault();
@@ -171,6 +226,7 @@ const DatosIndicador = forwardRef((props, ref) => {
 
     // Verificar que hay un material seleccionado en el contexto
     if (!materialSeleccionado || !materialSeleccionado.id) {
+      console.log('Material seleccionado en submit:', materialSeleccionado);
       setMensaje({
         texto: 'Error: Debe seleccionar un material en la sección de Datos Generales para continuar.',
         tipo: 'error'
@@ -265,21 +321,9 @@ const DatosIndicador = forwardRef((props, ref) => {
         texto: '¡Datos guardados correctamente!',
         tipo: 'success'
       });
-
-      // Resetear el formulario después de guardar
-      setFormData({
-        ...formData,
-        piezasProducidas: ''
-      });
       
-      // Resetear la comparación de velocidad
-      setComparacionVelocidad({
-        mostrar: false,
-        porcentaje: 0,
-        faltanCapturar: 0,
-        minutosFaltantes: 0,
-        tipo: ''
-      });
+      // Limpiar el formulario después de guardar exitosamente
+      limpiarFormulario();
       
     } catch (err) {
       console.error("Error al guardar datos:", err);
@@ -363,18 +407,22 @@ const DatosIndicador = forwardRef((props, ref) => {
 
           <div className="flex items-center">
             <label className="w-32 text-gray-700">Ciclo</label>
-            <div className="relative flex-1">
-              <select 
-                className="w-full border border-gray-300 rounded px-3 py-2 appearance-none"
-                name="ciclo"
-                value={formData.ciclo}
-                onChange={handleChange}
-                required
-              >
-                <option value="30">30</option>
-                <option value="60">60</option>
-              </select>
-              <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500 pointer-events-none" />
+            <div className="flex-1">
+              <div className="relative">
+                <select 
+                  className="w-full border border-gray-300 rounded px-3 py-2 appearance-none"
+                  name="ciclo"
+                  value={formData.ciclo}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Seleccionar ciclo...</option>
+                  {ciclosDisponibles.map(ciclo => (
+                    <option key={ciclo} value={ciclo}>{ciclo} minutos</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-500 pointer-events-none" />
+              </div>
             </div>
           </div>
           
@@ -450,48 +498,33 @@ const DatosIndicador = forwardRef((props, ref) => {
           </div>
         </div>
 
-        {/* Mostrar información sobre la comparación de velocidad nominal */}
-        {comparacionVelocidad.mostrar && (
+        {/* Mostrar información sobre la comparación de velocidad nominal - usando localComparacionVelocidad */}
+        {localComparacionVelocidad.mostrar && (
           <div className={`mt-4 p-3 rounded-lg flex items-start 
-            ${comparacionVelocidad.tipo === 'warning' 
+            ${localComparacionVelocidad.tipo === 'warning' 
               ? 'bg-yellow-50 border border-yellow-200' 
               : 'bg-green-50 border border-green-200'}`}>
-            {comparacionVelocidad.tipo === 'warning' ? (
+            {localComparacionVelocidad.tipo === 'warning' ? (
               <AlertCircle className="h-5 w-5 text-yellow-500 mr-2 mt-0.5" />
             ) : (
               <Info className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
             )}
             <div>
               <p className={`font-medium ${
-                comparacionVelocidad.tipo === 'warning' ? 'text-yellow-700' : 'text-green-700'
+                localComparacionVelocidad.tipo === 'warning' ? 'text-yellow-700' : 'text-green-700'
               }`}>
-                Producción al {comparacionVelocidad.porcentaje.toFixed(2)}% de la capacidad nominal
+                Producción al {localComparacionVelocidad.porcentaje.toFixed(2)}% de la capacidad nominal
               </p>
-              {comparacionVelocidad.tipo === 'warning' && (
+              {localComparacionVelocidad.tipo === 'warning' && (
                 <p className="text-yellow-600 text-sm mt-1">
-                  Faltan por capturar {comparacionVelocidad.faltanCapturar} piezas o registrar el tiempo equivalente de {comparacionVelocidad.minutosFaltantes} minutos como paros.
+                  Faltan por capturar {localComparacionVelocidad.faltanCapturar} piezas para alcanzar la capacidad nominal.
                 </p>
               )}
-              {comparacionVelocidad.tipo === 'success' && (
+              {localComparacionVelocidad.tipo === 'success' && (
                 <p className="text-green-600 text-sm mt-1">
                   La producción ha alcanzado o superado la capacidad nominal para el ciclo de {formData.ciclo} minutos.
                 </p>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* Mensaje actualizado sobre tiempo a capturar como paros o rechazos */}
-        {comparacionVelocidad.mostrar && comparacionVelocidad.tipo === 'warning' && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded flex items-start">
-            <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-            <div>
-              <p className="text-blue-700">
-                Puedes registrar las <span className="font-bold">{comparacionVelocidad.faltanCapturar}</span> piezas faltantes como rechazos en la sección de Rechazos.
-              </p>
-              <p className="text-blue-700 mt-1">
-                O registrar lo equivalente a <span className="font-bold">{comparacionVelocidad.minutosFaltantes}</span> minutos de paros.
-              </p>
             </div>
           </div>
         )}
@@ -512,6 +545,8 @@ const DatosIndicador = forwardRef((props, ref) => {
             </p>
           </div>
         )}
+
+       
       </div>
     </form>
   );

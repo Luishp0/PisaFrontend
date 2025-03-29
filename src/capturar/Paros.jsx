@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, Plus, Clock, Trash2, Edit, X, Check, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, forwardRef } from 'react';
+import { ChevronDown, Plus, Clock, Trash2, Edit, X, Check, ArrowLeft, Info } from 'lucide-react';
+import { useProduccion } from '../context/ProduccionContext';
 
-const Paros = () => {
+const Paros = forwardRef((props, ref) => {
+  const { produccionId, comparacionVelocidad } = useProduccion();
+  
   const [catalogosPorNivel, setCatalogosPorNivel] = useState({
     1: [],
     2: [],
@@ -15,6 +18,7 @@ const Paros = () => {
     nivel4: ''
   });
   const [duracion, setDuracion] = useState(0);
+  const [sugerenciaDuracion, setSugerenciaDuracion] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
@@ -24,8 +28,31 @@ const Paros = () => {
   const [mostrarFormulario, setMostrarFormulario] = useState(true);
   const [editandoParo, setEditandoParo] = useState(null);
   const [paroOriginal, setParoOriginal] = useState(null);
+  const [tiempoRegistrado, setTiempoRegistrado] = useState(0);
+  const [tiempoFaltante, setTiempoFaltante] = useState(0);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+  // Actualizar la sugerencia de duración cuando cambia la comparaciónVelocidad
+  useEffect(() => {
+    if (comparacionVelocidad && comparacionVelocidad.mostrar && comparacionVelocidad.tipo === 'warning') {
+      setSugerenciaDuracion(comparacionVelocidad.minutosFaltantes);
+      // No establecemos automáticamente la duración al valor sugerido
+      setTiempoFaltante(comparacionVelocidad.minutosFaltantes);
+    }
+  }, [comparacionVelocidad]);
+
+  // Calcular el tiempo total registrado y el tiempo faltante
+  useEffect(() => {
+    const tiempoTotal = historialParos.reduce((suma, paro) => suma + paro.duracion, 0);
+    setTiempoRegistrado(tiempoTotal);
+    
+    // Actualizar el tiempo faltante basado en la comparación de velocidad y lo ya registrado
+    if (comparacionVelocidad && comparacionVelocidad.mostrar && comparacionVelocidad.tipo === 'warning') {
+      const faltante = Math.max(0, comparacionVelocidad.minutosFaltantes - tiempoTotal);
+      setTiempoFaltante(faltante);
+    }
+  }, [historialParos, comparacionVelocidad]);
 
   // Obtener los datos del catálogo para el nivel 1 al cargar el componente
   useEffect(() => {
@@ -139,9 +166,125 @@ const Paros = () => {
     setSelecciones(prev => ({ ...prev, [`nivel${nivel}`]: valor }));
   };
 
+  // Manejar cambios en la duración
   const handleDuracionCambio = (e) => {
-    setDuracion(parseInt(e.target.value) || 0);
+    const nuevaDuracion = parseInt(e.target.value) || 0;
+    setDuracion(nuevaDuracion);
+    
+    // Verificar si la duración ingresada excede el tiempo faltante
+    if (tiempoFaltante > 0 && nuevaDuracion > tiempoFaltante) {
+      // No mostrar error aquí, solo cuando intenten guardar
+      console.log(`Atención: La duración ingresada (${nuevaDuracion}) excede el tiempo faltante (${tiempoFaltante}).`);
+    } else {
+      // Si había un error relacionado con la duración, limpiarlo
+      if (error && error.includes('Estás intentando registrar') || error && error.includes('Estás intentando aumentar')) {
+        setError(null);
+      }
+    }
   };
+
+  // Función para limpiar el formulario
+  const limpiarFormulario = () => {
+    setSelecciones({
+      nivel1: '',
+      nivel2: '',
+      nivel3: '',
+      nivel4: ''
+    });
+    
+    // Establecemos la duración a un valor predeterminado, sin usar el tiempoFaltante
+    setDuracion(0);
+  };
+
+  // Función para guardar los paros en la base de datos
+  const guardarParos = async () => {
+    if (!produccionId) {
+      setError('No hay un ID de producción válido para guardar los paros');
+      return false;
+    }
+
+    if (historialParos.length === 0) {
+      console.log('No hay paros para guardar');
+      return true; // No hay paros, pero esto no es un error
+    }
+
+    try {
+      setEnviando(true);
+      setError(null);
+      
+      const promesas = historialParos.map(async (paro) => {
+        // Determinar el nivel más profundo que tiene seleccionado
+        let nivelMasAlto = 1;
+        let descripcion = paro.nivel1.categoria;
+        let idNivel = paro.nivel1.id;
+        
+        if (paro.nivel4 && paro.nivel4.id) {
+          nivelMasAlto = 4;
+          descripcion = paro.nivel4.categoria;
+          idNivel = paro.nivel4.id;
+        } else if (paro.nivel3 && paro.nivel3.id) {
+          nivelMasAlto = 3;
+          descripcion = paro.nivel3.categoria;
+          idNivel = paro.nivel3.id;
+        } else if (paro.nivel2 && paro.nivel2.id) {
+          nivelMasAlto = 2;
+          descripcion = paro.nivel2.categoria;
+          idNivel = paro.nivel2.id;
+        }
+        
+        const paroData = {
+          produccion: produccionId,
+          numeroNivel: nivelMasAlto,
+          descripcion: descripcion,
+          duracion: paro.duracion,
+          idCatalogoParo: idNivel
+        };
+        
+        console.log('Enviando paro:', paroData);
+        
+        const response = await fetch(`${API_URL}/paros`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(paroData)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Error al guardar paro: ${response.status}`);
+        }
+        
+        return await response.json();
+      });
+      
+      const resultados = await Promise.all(promesas);
+      console.log('Paros guardados:', resultados);
+
+      // Mostrar mensaje de éxito incluyendo el tiempo total registrado
+      setMensaje(`Paros guardados exitosamente. Se han registrado ${tiempoRegistrado} minutos de paros.`);
+      
+      // Limpiar el formulario después de guardar exitosamente
+      limpiarFormulario();
+      
+      // Limpiar el historial después de guardar
+      setHistorialParos([]);
+      
+      return true;
+    } catch (err) {
+      console.error('Error al guardar los paros:', err);
+      setError(err.message || 'No se pudieron guardar los paros');
+      return false;
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  // Exponer la función al componente padre a través de la ref
+  React.useImperativeHandle(ref, () => ({
+    guardarParos
+  }));
 
   const handleAgregar = () => {
     // Validación básica
@@ -152,6 +295,12 @@ const Paros = () => {
 
     if (duracion <= 0) {
       setError('La duración debe ser mayor a 0 minutos');
+      return;
+    }
+    
+    // Validar si se está intentando registrar más tiempo del necesario
+    if (duracion > tiempoFaltante && tiempoFaltante > 0) {
+      setError(`Estás intentando registrar ${duracion} minutos, pero solo faltan ${tiempoFaltante} minutos. Ajusta la duración para continuar.`);
       return;
     }
 
@@ -213,17 +362,8 @@ const Paros = () => {
       // Mostrar el historial si estaba oculto
       setMostrarHistorial(true);
       
-      // Ocultar el formulario
-      setMostrarFormulario(false);
-      
-      // Resetear el formulario
-      setSelecciones({
-        nivel1: '',
-        nivel2: '',
-        nivel3: '',
-        nivel4: ''
-      });
-      setDuracion(0);
+      // Limpiar el formulario
+      limpiarFormulario();
       
       // Limpiar el mensaje después de 3 segundos
       setTimeout(() => {
@@ -290,14 +430,8 @@ const Paros = () => {
     setEditandoParo(null);
     setParoOriginal(null);
     
-    // Resetear el formulario
-    setSelecciones({
-      nivel1: '',
-      nivel2: '',
-      nivel3: '',
-      nivel4: ''
-    });
-    setDuracion(0);
+    // Limpiar el formulario
+    limpiarFormulario();
   };
   
   // Guardar los cambios en un paro editado
@@ -310,6 +444,19 @@ const Paros = () => {
     if (duracion <= 0) {
       setError('La duración debe ser mayor a 0 minutos');
       return;
+    }
+    
+    // Si estamos editando un paro, necesitamos calcular si el nuevo valor de duración es aceptable
+    if (paroOriginal) {
+      const duracionAnterior = paroOriginal.duracion;
+      const duracionNueva = duracion;
+      const diferencia = duracionNueva - duracionAnterior;
+      
+      // Si la duración aumentó, verificamos que no exceda el tiempo faltante
+      if (diferencia > 0 && diferencia > tiempoFaltante && tiempoFaltante > 0) {
+        setError(`Estás intentando aumentar ${diferencia} minutos, pero solo faltan ${tiempoFaltante} minutos. Ajusta la duración para continuar.`);
+        return;
+      }
     }
     
     try {
@@ -366,17 +513,8 @@ const Paros = () => {
       setEditandoParo(null);
       setParoOriginal(null);
       
-      // Ocultar el formulario
-      setMostrarFormulario(false);
-      
-      // Resetear el formulario
-      setSelecciones({
-        nivel1: '',
-        nivel2: '',
-        nivel3: '',
-        nivel4: ''
-      });
-      setDuracion(0);
+      // Limpiar el formulario
+      limpiarFormulario();
       
       // Limpiar el mensaje después de 3 segundos
       setTimeout(() => {
@@ -415,6 +553,37 @@ const Paros = () => {
         {mensaje && (
           <div className="mb-4 bg-green-100 text-green-700 p-3 rounded border border-green-300">
             {mensaje}
+          </div>
+        )}
+        
+        {/* Mostrar sugerencia de paros y tiempo registrado */}
+        {comparacionVelocidad && comparacionVelocidad.mostrar && comparacionVelocidad.tipo === 'warning' && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+            <div className="flex items-start">
+              <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
+              <div className="text-blue-700">
+                <p className="font-medium">Registrar lo equivalente a <span className="font-bold">{comparacionVelocidad.minutosFaltantes}</span> minutos de paros</p>
+                <p className="text-sm mt-1">Para cumplir con la producción nominal esperada, registra los tiempos de paro.</p>
+                
+                {tiempoRegistrado > 0 && (
+                  <div className="mt-2 pt-2 border-t border-blue-200">
+                    <p className="font-medium">
+                      Estado actual: {tiempoRegistrado} / {comparacionVelocidad.minutosFaltantes} minutos registrados
+                      ({Math.min(100, Math.round((tiempoRegistrado / comparacionVelocidad.minutosFaltantes) * 100))}%)
+                    </p>
+                    {tiempoFaltante > 0 ? (
+                      <p className="text-sm mt-1">
+                        Aún faltan <span className="font-bold">{tiempoFaltante}</span> minutos por registrar
+                      </p>
+                    ) : (
+                      <p className="text-sm mt-1 text-green-700 font-medium">
+                        ¡Se ha registrado el tiempo de paros requerido! No es posible agregar más paros.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
         
@@ -513,11 +682,14 @@ const Paros = () => {
                 </div>
               ) : (
                 <button
-                  className={`px-4 py-2 rounded flex items-center ${enviando || !selecciones.nivel1 || duracion <= 0 
-                    ? 'bg-blue-300 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+                  className={`px-4 py-2 rounded flex items-center ${
+                    enviando || !selecciones.nivel1 || duracion <= 0 || tiempoFaltante <= 0
+                      ? 'bg-blue-300 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } text-white`}
                   onClick={handleAgregar}
-                  disabled={enviando || !selecciones.nivel1 || duracion <= 0}
+                  disabled={enviando || !selecciones.nivel1 || duracion <= 0 || tiempoFaltante <= 0}
+                  title={tiempoFaltante <= 0 ? "Ya se ha registrado el tiempo de paros requerido" : ""}
                 >
                   {enviando ? (
                     <>
@@ -533,6 +705,20 @@ const Paros = () => {
               )}
             </div>
           </>
+        )}
+        
+        {/* Total de tiempo de paros registrado */}
+        {tiempoRegistrado > 0 && (
+          <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded">
+            <div className="flex items-center">
+              <Clock className="h-5 w-5 text-gray-600 mr-2" />
+              <div>
+                <p className="font-medium text-gray-700">
+                  Tiempo total de paros: <span className="font-bold">{tiempoRegistrado}</span> minutos
+                </p>
+              </div>
+            </div>
+          </div>
         )}
         
         {/* Sección de historial de paros agregados */}
@@ -555,43 +741,43 @@ const Paros = () => {
                 <ul className="divide-y divide-gray-200">
                   {historialParos.map((paro) => (
                     <li 
-                      key={paro.id}
-                      className={`py-3 px-2 ${
-                        paro.animacion 
-                          ? 'bg-green-100 animate-pulse transition-colors duration-1000' 
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium text-gray-800">{formatearCategorias(paro)}</p>
-                          <p className="text-sm text-gray-500">{paro.timestamp}</p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <div className="flex items-center text-blue-600">
-                            <Clock className="h-4 w-4 mr-1" />
-                            <span className="font-medium">{paro.duracion} min</span>
-                          </div>
-                          
-                          <button
-                            className="p-1 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-100 rounded"
-                            onClick={() => handleIniciarEdicion(paro)}
-                            disabled={editandoParo !== null}
-                            title="Editar paro"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          
-                          <button
-                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
-                            onClick={() => handleEliminarParo(paro.id)}
-                            title="Eliminar paro"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
+                    key={paro.id}
+                    className={`py-3 px-2 ${
+                      paro.animacion 
+                        ? 'bg-green-100 animate-pulse transition-colors duration-1000' 
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-gray-800">{formatearCategorias(paro)}</p>
+                        <p className="text-sm text-gray-500">{paro.timestamp}</p>
                       </div>
-                    </li>
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center text-blue-600">
+                          <Clock className="h-4 w-4 mr-1" />
+                          <span className="font-medium">{paro.duracion} min</span>
+                        </div>
+                        
+                        <button
+                          className="p-1 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-100 rounded"
+                          onClick={() => handleIniciarEdicion(paro)}
+                          disabled={editandoParo !== null}
+                          title="Editar paro"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        
+                        <button
+                          className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
+                          onClick={() => handleEliminarParo(paro.id)}
+                          title="Eliminar paro"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </li>
                   ))}
                 </ul>
               )}
@@ -601,6 +787,6 @@ const Paros = () => {
       </div>
     </div>
   );
-};
+});
 
 export default Paros;

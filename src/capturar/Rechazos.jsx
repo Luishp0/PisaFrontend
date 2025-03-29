@@ -24,12 +24,25 @@ const Rechazos = forwardRef((props, ref) => {
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [totalRechazos, setTotalRechazos] = useState(0);
   const [piezasFaltantes, setPiezasFaltantes] = useState(0);
+  const [limiteAlcanzado, setLimiteAlcanzado] = useState(false);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-  // Exponemos la función guardarRechazos para que pueda ser llamada desde el componente padre
+  // Función para limpiar los datos después de guardar
+  const limpiarDatos = () => {
+    setRechazosAgregados([]);
+    setSelectedRechazo('');
+    setCantidad(0);
+    setValidation({ error: false, message: '' });
+    setMensaje({ texto: '', tipo: '' });
+    setTotalRechazos(0);
+    // No limpiamos piezasFaltantes ya que depende del contexto
+  };
+
+  // Exponemos las funciones guardarRechazos y limpiarDatos para que puedan ser llamadas desde el componente padre
   useImperativeHandle(ref, () => ({
-    guardarRechazos
+    guardarRechazos,
+    limpiarDatos
   }));
 
   // Calcular las piezas faltantes basadas en la producción y velocidad nominal
@@ -73,7 +86,10 @@ const Rechazos = forwardRef((props, ref) => {
   useEffect(() => {
     const total = rechazosAgregados.reduce((sum, item) => sum + item.cantidad, 0);
     setTotalRechazos(total);
-  }, [rechazosAgregados]);
+    
+    // Verificar si se alcanzó el límite de piezas faltantes
+    setLimiteAlcanzado(total >= piezasFaltantes && piezasFaltantes > 0);
+  }, [rechazosAgregados, piezasFaltantes]);
 
   // Función para cargar los catálogos de rechazo usando fetch
   useEffect(() => {
@@ -135,6 +151,16 @@ const Rechazos = forwardRef((props, ref) => {
       return false;
     }
 
+    // Validar que no supere las piezas faltantes
+    const totalActual = rechazosAgregados.reduce((sum, item) => sum + item.cantidad, 0);
+    if (totalActual + cantidad > piezasFaltantes && piezasFaltantes > 0) {
+      setValidation({
+        error: true,
+        message: `No puedes agregar más de ${piezasFaltantes} piezas rechazadas en total.`
+      });
+      return false;
+    }
+
     return true;
   };
 
@@ -172,6 +198,18 @@ const Rechazos = forwardRef((props, ref) => {
   const handleSaveEdit = (index) => {
     if (editCantidad <= 0) {
       setValidation({ error: true, message: 'La cantidad debe ser mayor a 0.' });
+      return;
+    }
+
+    // Validar que la edición no supere el límite de piezas faltantes
+    const totalSinEsteRechazo = rechazosAgregados.reduce((sum, item, idx) => 
+      sum + (idx === index ? 0 : item.cantidad), 0);
+    
+    if (totalSinEsteRechazo + editCantidad > piezasFaltantes && piezasFaltantes > 0) {
+      setValidation({
+        error: true,
+        message: `No puedes tener más de ${piezasFaltantes} piezas rechazadas en total.`
+      });
       return;
     }
 
@@ -280,6 +318,11 @@ const Rechazos = forwardRef((props, ref) => {
             produccionId;
   };
 
+  // Determinar si los controles deben estar deshabilitados
+  const controlesDeshabilitados = () => {
+    return !hayDatosDisponibles() || limiteAlcanzado;
+  };
+
   // Determinar el porcentaje de cumplimiento para mostrar en la interfaz
   const calcularPorcentajeCumplimiento = () => {
     if (piezasFaltantes <= 0 || totalRechazos <= 0) return 0;
@@ -295,16 +338,28 @@ const Rechazos = forwardRef((props, ref) => {
         {/* Información de piezas faltantes */}
         {hayDatosDisponibles() ? (
           piezasFaltantes > 0 ? (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded flex items-start">
-              <AlertCircle className="h-5 w-5 text-yellow-500 mr-2 mt-0.5" />
+            <div className={`mb-4 p-3 ${limiteAlcanzado ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'} rounded flex items-start`}>
+              {limiteAlcanzado ? (
+                <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-yellow-500 mr-2 mt-0.5" />
+              )}
               <div>
-                <p className="text-yellow-700 font-medium">
-                  Faltan {piezasFaltantes} piezas para alcanzar el 100% de producción nominal
-                </p>
-                {totalRechazos > 0 && (
-                  <p className="text-yellow-600 text-sm mt-1">
-                    Has registrado {totalRechazos} de {piezasFaltantes} piezas como rechazos ({calcularPorcentajeCumplimiento()}%)
+                {limiteAlcanzado ? (
+                  <p className="text-green-700 font-medium">
+                    Has registrado todas las {piezasFaltantes} piezas faltantes como rechazos
                   </p>
+                ) : (
+                  <>
+                    <p className="text-yellow-700 font-medium">
+                      Faltan {piezasFaltantes} piezas para alcanzar el 100% de producción nominal
+                    </p>
+                    {totalRechazos > 0 && (
+                      <p className="text-yellow-600 text-sm mt-1">
+                        Has registrado {totalRechazos} de {piezasFaltantes} piezas como rechazos ({calcularPorcentajeCumplimiento()}%)
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -332,11 +387,11 @@ const Rechazos = forwardRef((props, ref) => {
           <div className="w-1/2 pr-2">
             <div className="relative">
               <select
-                className={`w-full border ${validation.error && !selectedRechazo ? 'border-red-500' : 'border-gray-300'} rounded px-3 py-2 appearance-none`}
+                className={`w-full border ${validation.error && !selectedRechazo ? 'border-red-500' : 'border-gray-300'} rounded px-3 py-2 appearance-none ${controlesDeshabilitados() ? 'bg-gray-100' : ''}`}
                 name="tipo"
                 value={selectedRechazo}
                 onChange={handleRechazoChange}
-                disabled={loading || (!hayDatosDisponibles())}
+                disabled={controlesDeshabilitados()}
               >
                 <option value="">Seleccionar rechazo...</option>
                 {catalogoRechazos.map((rechazo) => (
@@ -351,24 +406,24 @@ const Rechazos = forwardRef((props, ref) => {
           <div className="w-1/3 px-2">
             <input
               type="number"
-              className={`w-full border ${validation.error && cantidad <= 0 ? 'border-red-500' : 'border-gray-300'} rounded px-3 py-2`}
+              className={`w-full border ${validation.error && cantidad <= 0 ? 'border-red-500' : 'border-gray-300'} rounded px-3 py-2 ${controlesDeshabilitados() ? 'bg-gray-100' : ''}`}
               placeholder="0"
               name="cantidad"
               min="1"
               value={cantidad}
               onChange={handleCantidadChange}
-              disabled={!hayDatosDisponibles()}
+              disabled={controlesDeshabilitados()}
             />
           </div>
           <div className="w-1/6 pl-2 flex justify-center">
             <button
               className={`px-4 py-2 rounded flex items-center transition-colors ${
-                !hayDatosDisponibles() ? 
+                controlesDeshabilitados() ? 
                 'bg-blue-300 cursor-not-allowed text-white' : 
                 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
               onClick={handleAgregarRechazo}
-              disabled={!hayDatosDisponibles()}
+              disabled={controlesDeshabilitados()}
             >
               <Plus className="h-4 w-4 mr-1" /> Agregar
             </button>
@@ -377,6 +432,12 @@ const Rechazos = forwardRef((props, ref) => {
 
         {validation.error && (
           <div className="text-red-500 mb-4">{validation.message}</div>
+        )}
+
+        {limiteAlcanzado && (
+          <div className="text-green-600 mb-4">
+            Se ha alcanzado el límite de piezas rechazadas. No se pueden agregar más.
+          </div>
         )}
 
         {error && (
@@ -430,8 +491,9 @@ const Rechazos = forwardRef((props, ref) => {
                       <div className="w-1/6 flex justify-end">
                         <button 
                           onClick={() => handleStartEdit(index)}
-                          className="p-1 text-blue-600 hover:text-blue-800 mr-1"
+                          className={`p-1 text-blue-600 hover:text-blue-800 mr-1 ${limiteAlcanzado ? 'opacity-50 cursor-not-allowed' : ''}`}
                           title="Editar"
+                          disabled={limiteAlcanzado}
                         >
                           <Edit2 className="h-5 w-5" />
                         </button>

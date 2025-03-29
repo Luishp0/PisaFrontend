@@ -196,6 +196,17 @@ const DatosGenerales = forwardRef((props, ref) => {
     validateForm();
   }, [formData]);
 
+  // Debugging useEffect to check when material changes
+  useEffect(() => {
+    if (formData.material) {
+      console.log('Material cambiado en DatosGenerales:', formData.material);
+      
+      // Log the selected material details
+      const materialSeleccionado = materiales.find(material => material._id === formData.material);
+      console.log('Material seleccionado detalles:', materialSeleccionado);
+    }
+  }, [formData.material, materiales]);
+
   // Función genérica para manejar cambios en inputs y selects
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -213,12 +224,19 @@ const DatosGenerales = forwardRef((props, ref) => {
         // Siempre cargar la velocidad del material, incluso si es 0 o vacía
         const velocidadMaterial = materialSeleccionado.velocidadNominal?.toString() || '';
         
-        // Actualizar el contexto con el material seleccionado
+        // Actualizar el contexto con el material seleccionado INMEDIATAMENTE
         actualizarMaterial(
           materialSeleccionado._id,
           materialSeleccionado.nombreMaterialCatalogo,
           materialSeleccionado.velocidadNominal || 0
         );
+        
+        // Log to verify the context update
+        console.log('Material actualizado en contexto:', {
+          id: materialSeleccionado._id,
+          nombre: materialSeleccionado.nombreMaterialCatalogo,
+          velocidadNominal: materialSeleccionado.velocidadNominal || 0
+        });
         
         setFormData({
           ...formData,
@@ -265,6 +283,18 @@ const DatosGenerales = forwardRef((props, ref) => {
       ...prev,
       [name]: true
     }));
+    
+    // Si el campo es material, asegurar que el contexto está actualizado
+    if (name === 'material' && formData.material) {
+      const materialSeleccionado = materiales.find(material => material._id === formData.material);
+      if (materialSeleccionado) {
+        actualizarMaterial(
+          materialSeleccionado._id,
+          materialSeleccionado.nombreMaterialCatalogo,
+          materialSeleccionado.velocidadNominal || 0
+        );
+      }
+    }
   };
 
   // Función para guardar en una colección específica
@@ -432,6 +462,9 @@ const DatosGenerales = forwardRef((props, ref) => {
       });
 
       // Opcional: Limpiar el formulario después de guardar
+      // Asegurar que el contexto es actualizado correctamente
+      actualizarMaterial('', '', 0);
+      
       setFormData({
         centro: '',
         departamento: '',
@@ -443,9 +476,6 @@ const DatosGenerales = forwardRef((props, ref) => {
         velocidad: '',
         descripcionMaterial: ''
       });
-      
-      // Actualizar el contexto con valores vacíos
-      actualizarMaterial('', '', 0);
 
     } catch (error) {
       setMensaje({
@@ -789,7 +819,7 @@ const DatosGenerales = forwardRef((props, ref) => {
           </div>
         )}
 
-        {mensaje.texto && (
+{mensaje.texto && (
           <div className={`mt-4 p-3 rounded ${
             mensaje.tipo === 'success' 
               ? 'bg-green-50 border border-green-200 text-green-700' 

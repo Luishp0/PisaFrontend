@@ -15,6 +15,7 @@ const CapturaIndicadoresContent = () => {
   const indicadorRef = React.useRef();
   const generalesRef = React.useRef();
   const rechazosRef = React.useRef();
+  const parosRef = React.useRef();
 
   // Este efecto se activará cuando el ID de producción cambie
   useEffect(() => {
@@ -26,14 +27,41 @@ const CapturaIndicadoresContent = () => {
           const event = new Event('submit', { cancelable: true });
           await generalesRef.current.handleSubmit(event);
           
+          // Una vez guardados los datos generales, proceder a guardar los rechazos
+          if (rechazosRef.current && rechazosRef.current.guardarRechazos) {
+            console.log('Guardando datos de rechazos...');
+            await rechazosRef.current.guardarRechazos();
+          }
+          
+          // Finalmente, guardar los paros
+          if (parosRef.current && parosRef.current.guardarParos) {
+            console.log('Guardando datos de paros...');
+            await parosRef.current.guardarParos();
+          }
+          
           setMensaje({
             texto: 'Todos los datos fueron guardados correctamente',
             tipo: 'success'
           });
+
+          // Limpiar todos los formularios después de guardar exitosamente
+          if (indicadorRef.current && typeof indicadorRef.current.limpiarFormulario === 'function') {
+            indicadorRef.current.limpiarFormulario();
+          }
+
+          // Resetear el estado de Rechazos y Paros si tienen métodos para eso
+          if (rechazosRef.current && typeof rechazosRef.current.limpiarDatos === 'function') {
+            rechazosRef.current.limpiarDatos();
+          }
+          
+          if (parosRef.current && typeof parosRef.current.limpiarDatos === 'function') {
+            parosRef.current.limpiarDatos();
+          }
+          
         } catch (error) {
-          console.error('Error al guardar datos generales:', error);
+          console.error('Error en el proceso de guardado completo:', error);
           setMensaje({
-            texto: 'Error al guardar los datos generales: ' + (error.message || 'Error desconocido'),
+            texto: 'Error al guardar los datos: ' + (error.message || 'Error desconocido'),
             tipo: 'error'
           });
         } finally {
@@ -60,11 +88,8 @@ const CapturaIndicadoresContent = () => {
         const event = new Event('submit', { cancelable: true });
         await indicadorRef.current.handleSubmit(event);
         
-        // Ahora guardamos los rechazos si hay una función para ello
-        if (rechazosRef.current && rechazosRef.current.guardarRechazos) {
-          console.log('Guardando datos de rechazos...');
-          await rechazosRef.current.guardarRechazos();
-        }
+        // El resto del proceso (DatosGenerales, Rechazos, Paros) se ejecutará
+        // automáticamente en el useEffect cuando cambie produccionId
       }
     } catch (error) {
       console.error('Error en el proceso de guardado:', error);
@@ -106,11 +131,11 @@ const CapturaIndicadoresContent = () => {
             {mensaje.texto}
           </div>
         )}
-         <DatosGenerales ref={generalesRef} />
+        
+        <DatosGenerales ref={generalesRef} />
         <DatosIndicador ref={indicadorRef} />
-       
         <Rechazos ref={rechazosRef} />
-        <Paros />
+        <Paros ref={parosRef} />
       </div>
     </div>
   );

@@ -1,31 +1,18 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Crear el contexto
 const ProduccionContext = createContext();
 
 // Hook personalizado para usar el contexto
-export const useProduccion = () => {
-  const context = useContext(ProduccionContext);
-  if (!context) {
-    throw new Error('useProduccion debe ser usado dentro de un ProduccionProvider');
-  }
-  return context;
-};
+export const useProduccion = () => useContext(ProduccionContext);
 
-// Proveedor del contexto
+// Componente proveedor
 export const ProduccionProvider = ({ children }) => {
-  // Estado para el ID de producción
+  // Estado para el ID de producción que se genera al guardar DatosIndicador
   const [produccionId, setProduccionId] = useState(null);
   
-  // Estado para los datos completos de producción
+  // Estado para almacenar los datos completos de la producción
   const [produccionData, setProduccionData] = useState(null);
-  
-  // Estado para controlar si el proceso de guardado está completo
-  const [guardadoCompleto, setGuardadoCompleto] = useState(false);
-  
-  // Estado para datos temporales de producción (para comunicación entre componentes sin guardar)
-  const [piezasProducidasTemp, setPiezasProducidasTemp] = useState(null);
-  const [cicloTemp, setCicloTemp] = useState(null);
   
   // Estado para el material seleccionado
   const [materialSeleccionado, setMaterialSeleccionado] = useState({
@@ -33,54 +20,96 @@ export const ProduccionProvider = ({ children }) => {
     nombre: '',
     velocidadNominal: 0
   });
+  
+  // Estado para las piezas producidas temporales (antes de guardar)
+  const [piezasProducidasTemp, setPiezasProducidasTemp] = useState(null);
+  
+  // Estado para el ciclo temporal (antes de guardar)
+  const [cicloTemp, setCicloTemp] = useState(null);
+  
+  // Estado para la comparación de velocidad
+  const [comparacionVelocidad, setComparacionVelocidad] = useState({
+    mostrar: false,
+    porcentaje: 0,
+    faltanCapturar: 0,
+    minutosFaltantes: 0,
+    tipo: ''
+  });
+  
+  // Estado para indicar que se debe proceder con el guardado completo
+  const [guardadoCompleto, setGuardadoCompleto] = useState(false);
 
-  // Función para actualizar el material seleccionado
+  // Log for debugging purposes
+  useEffect(() => {
+    console.log('Material seleccionado actualizado:', materialSeleccionado);
+  }, [materialSeleccionado]);
+  
+  // Log para debugging de comparacionVelocidad (solo se ejecuta cuando cambios reales)
+  useEffect(() => {
+    console.log('Comparación de velocidad actualizada:', comparacionVelocidad);
+  }, [comparacionVelocidad]);
+  
+  // Función para actualizar la información del material seleccionado
   const actualizarMaterial = (id, nombre, velocidadNominal) => {
-    console.log('Actualizando material seleccionado:', { id, nombre, velocidadNominal });
     setMaterialSeleccionado({
-      id,
-      nombre,
-      velocidadNominal: Number(velocidadNominal) || 0
+      id: id || '',
+      nombre: nombre || '',
+      velocidadNominal: velocidadNominal || 0
     });
   };
-
-  // Función para actualizar los datos temporales de piezas producidas y ciclo
-  const actualizarPiezasTemp = (piezas, ciclo) => {
-    console.log('Actualizando datos temporales:', { piezas, ciclo });
-    setPiezasProducidasTemp(piezas);
-    setCicloTemp(ciclo);
-  };
-
-  // Función para actualizar el ID y los datos de producción
+  
+  // Función para actualizar el ID de producción y los datos
   const actualizarProduccion = (id, data) => {
-    console.log('Actualizando ID de producción:', id);
     setProduccionId(id);
     setProduccionData(data);
-    setGuardadoCompleto(true);
+    
+    // Si se establece un nuevo ID de producción, indicar que se puede proceder con el guardado completo
+    if (id) {
+      setGuardadoCompleto(true);
+    }
   };
-
-  // Función para resetear el estado
+  
+  // Función para actualizar información temporal de piezas
+  const actualizarPiezasTemp = (piezas, ciclo) => {
+    setPiezasProducidasTemp(piezas);
+    if (ciclo) {
+      setCicloTemp(ciclo);
+    }
+  };
+  
+  // Función para actualizar la comparación de velocidad
+  const actualizarComparacionVelocidad = (nuevaComparacion) => {
+    // Verificar si los datos son diferentes antes de actualizar el estado
+    // Esto evita actualizaciones innecesarias que podrían causar bucles
+    setComparacionVelocidad(prevComparacion => {
+      if (JSON.stringify(prevComparacion) === JSON.stringify(nuevaComparacion)) {
+        return prevComparacion; // No hay cambios, devolver el estado anterior
+      }
+      return nuevaComparacion; // Hay cambios, actualizar el estado
+    });
+  };
+  
+  // Función para resetear el estado de la producción
   const resetearProduccion = () => {
-    setProduccionId(null);
-    setProduccionData(null);
     setGuardadoCompleto(false);
-    // No resetear el material seleccionado, porque se usa entre formularios
   };
-
-  // Valor del contexto que será proporcionado
+  
+  // Valores que se expondrán a través del contexto
   const value = {
     produccionId,
     produccionData,
-    guardadoCompleto,
     materialSeleccionado,
     piezasProducidasTemp,
     cicloTemp,
-    actualizarProduccion,
-    resetearProduccion,
+    comparacionVelocidad,
+    guardadoCompleto,
     actualizarMaterial,
-    actualizarPiezasTemp
+    actualizarProduccion,
+    actualizarPiezasTemp,
+    actualizarComparacionVelocidad,
+    resetearProduccion
   };
-
+  
   return (
     <ProduccionContext.Provider value={value}>
       {children}
