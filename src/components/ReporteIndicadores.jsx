@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Pencil, Trash2 } from 'lucide-react';
+import { Calendar, Pencil, Trash2, Filter, RefreshCw } from 'lucide-react';
 
 const ReporteIndicadores = () => {
   // Estados para almacenar los datos de catálogos
@@ -10,6 +10,7 @@ const ReporteIndicadores = () => {
   const [resultados, setResultados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [filtroAplicado, setFiltroAplicado] = useState(false);
 
   // Estado para almacenar los filtros seleccionados
   const [filtros, setFiltros] = useState({
@@ -17,16 +18,18 @@ const ReporteIndicadores = () => {
     departamento: '',
     linea: '',
     proceso: '',
-    fechaDesde: '',
-    fechaHasta: ''
+    desde: '', // Cambiado a 'desde' para coincidir con el backend
+    hasta: ''  // Cambiado a 'hasta' para coincidir con el backend
   });
 
   // URL base para las peticiones API
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+  const API_URL = 'http://localhost:8000';
 
-  // Función para cargar los catálogos desde la API, envuelta en useCallback
+  // Función para cargar los catálogos desde la API
   const cargarCatalogos = useCallback(async () => {
     try {
+      setLoading(true);
+      
       // Cargar catálogo de centros
       const responseCentros = await fetch(`${API_URL}/catalogoCentro`);
       if (!responseCentros.ok) {
@@ -62,13 +65,15 @@ const ReporteIndicadores = () => {
     } catch (error) {
       console.error('Error al cargar catálogos:', error);
       setError('Error al cargar los catálogos. Por favor, intente de nuevo.');
+    } finally {
+      setLoading(false);
     }
-  }, [API_URL]); // Dependencia de API_URL
+  }, [API_URL]);
 
   // Cargar catálogos al montar el componente
   useEffect(() => {
     cargarCatalogos();
-  }, [cargarCatalogos]); // Incluimos cargarCatalogos como dependencia
+  }, [cargarCatalogos]);
 
   // Función para manejar cambios en los inputs
   const handleInputChange = (e) => {
@@ -79,7 +84,21 @@ const ReporteIndicadores = () => {
     }));
   };
 
-  // Función para obtener datos filtrados del nuevo endpoint
+  // Función para limpiar todos los filtros
+  const limpiarFiltros = () => {
+    setFiltros({
+      centro: '',
+      departamento: '',
+      linea: '',
+      proceso: '',
+      desde: '',
+      hasta: ''
+    });
+    setFiltroAplicado(false);
+    setResultados([]);
+  };
+
+  // Función para obtener datos filtrados del endpoint
   const obtenerResultados = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -93,17 +112,19 @@ const ReporteIndicadores = () => {
       if (filtros.departamento) queryParams.append('departamento', filtros.departamento);
       if (filtros.linea) queryParams.append('linea', filtros.linea);
       if (filtros.proceso) queryParams.append('proceso', filtros.proceso);
-      if (filtros.fechaDesde) queryParams.append('fechaDesde', filtros.fechaDesde);
-      if (filtros.fechaHasta) queryParams.append('fechaHasta', filtros.fechaHasta);
+      if (filtros.desde) queryParams.append('desde', filtros.desde);
+      if (filtros.hasta) queryParams.append('hasta', filtros.hasta);
       
-      // Llamar al nuevo endpoint que maneja todo el filtrado en el backend
-      const response = await fetch(`${API_URL}/reporteIndicadores?${queryParams}`);
+      // Llamar al endpoint de reporteIndicador
+      const response = await fetch(`${API_URL}/reporteindicador?${queryParams}`);
+      
       if (!response.ok) {
         throw new Error('Error al obtener datos filtrados');
       }
       
       const datos = await response.json();
       setResultados(datos);
+      setFiltroAplicado(true);
       
     } catch (error) {
       console.error('Error al obtener resultados:', error);
@@ -116,7 +137,7 @@ const ReporteIndicadores = () => {
   // Funciones para acciones en la tabla
   const handleEditar = (registro) => {
     console.log('Editar registro:', registro);
-    // Aquí puedes implementar la lógica para editar un registro
+    // Aquí implementarías la lógica para editar un registro
   };
 
   const handleEliminar = async (registro) => {
@@ -148,12 +169,29 @@ const ReporteIndicadores = () => {
     }
   };
 
+  // Función para verificar si hay algún filtro aplicado
+  const hayFiltrosAplicados = () => {
+    return Object.values(filtros).some(value => value !== '');
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">Reporte de Indicadores</h1>
       
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">Filtros</h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">Filtros</h2>
+          {hayFiltrosAplicados() && (
+            <button
+              type="button"
+              onClick={limpiarFiltros}
+              className="flex items-center text-blue-600 hover:text-blue-800"
+            >
+              <RefreshCw size={16} className="mr-1" />
+              Limpiar filtros
+            </button>
+          )}
+        </div>
         
         <form onSubmit={obtenerResultados}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -167,7 +205,7 @@ const ReporteIndicadores = () => {
               >
                 <option value="">Seleccionar centro</option>
                 {centros.map(centro => (
-                  <option key={centro._id} value={centro._id}>
+                  <option key={centro._id} value={centro.nombreCentroCatalogo}>
                     {centro.nombreCentroCatalogo}
                   </option>
                 ))}
@@ -184,7 +222,7 @@ const ReporteIndicadores = () => {
               >
                 <option value="">Seleccionar departamento</option>
                 {departamentos.map(depto => (
-                  <option key={depto._id} value={depto._id}>
+                  <option key={depto._id} value={depto.nombreDepartamentoCatalogo}>
                     {depto.nombreDepartamentoCatalogo}
                   </option>
                 ))}
@@ -201,7 +239,7 @@ const ReporteIndicadores = () => {
               >
                 <option value="">Seleccionar línea</option>
                 {lineas.map(linea => (
-                  <option key={linea._id} value={linea._id}>
+                  <option key={linea._id} value={linea.nombreLineaCatalogo}>
                     {linea.nombreLineaCatalogo}
                   </option>
                 ))}
@@ -218,7 +256,7 @@ const ReporteIndicadores = () => {
               >
                 <option value="">Seleccionar proceso</option>
                 {procesos.map(proceso => (
-                  <option key={proceso._id} value={proceso._id}>
+                  <option key={proceso._id} value={proceso.nombreProcesoCatalogo}>
                     {proceso.nombreProcesoCatalogo}
                   </option>
                 ))}
@@ -232,8 +270,8 @@ const ReporteIndicadores = () => {
               <div className="relative">
                 <input
                   type="date"
-                  name="fechaDesde"
-                  value={filtros.fechaDesde}
+                  name="desde"
+                  value={filtros.desde}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -246,8 +284,8 @@ const ReporteIndicadores = () => {
               <div className="relative">
                 <input
                   type="date"
-                  name="fechaHasta"
-                  value={filtros.fechaHasta}
+                  name="hasta"
+                  value={filtros.hasta}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -259,7 +297,7 @@ const ReporteIndicadores = () => {
           <div className="flex justify-center">
             <button 
               type="submit" 
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-8 rounded-md transition duration-200"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-8 rounded-md transition duration-200 flex items-center"
               disabled={loading}
               style={{
                 backgroundColor: '#2563EB',
@@ -267,7 +305,17 @@ const ReporteIndicadores = () => {
                 opacity: loading ? 0.7 : 1
               }}
             >
-              {loading ? 'CARGANDO...' : 'OBTENER INFORMACIÓN'}
+              {loading ? (
+                <>
+                  <RefreshCw size={18} className="mr-2 animate-spin" />
+                  CARGANDO...
+                </>
+              ) : (
+                <>
+                  <Filter size={18} className="mr-2" />
+                  APLICAR FILTROS
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -284,6 +332,12 @@ const ReporteIndicadores = () => {
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
+          </div>
+        )}
+        
+        {resultados.length === 0 && filtroAplicado && !loading && (
+          <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-3 rounded mb-4">
+            No se encontraron resultados con los filtros aplicados.
           </div>
         )}
         
@@ -314,12 +368,12 @@ const ReporteIndicadores = () => {
                     <td className="py-3 px-4 text-sm">{row.orden}</td>
                     <td className="py-3 px-4 text-sm">{row.lote}</td>
                     <td className="py-3 px-4 text-sm">{row.piezas}</td>
-                    <td className="py-3 px-4 text-sm">{row.nominales}</td>
+                    <td className="py-3 px-4 text-sm">{row.velocidadNominal}</td>
                     <td className="py-3 px-4 text-sm">{row.fecha}</td>
                     <td className="py-3 px-4 text-sm">{row.hora}</td>
                     <td className="py-3 px-4 text-sm">{row.turno}</td>
                     <td className="py-3 px-4 text-sm">{row.ciclo}</td>
-                    <td className="py-3 px-4 text-sm">{row.paros}</td>
+                    <td className="py-3 px-4 text-sm">{row.tiempoParo}</td>
                     <td className="py-3 px-4 text-sm">{row.rechazos}</td>
                     <td className="py-3 px-4 text-sm">{row.proceso}</td>
                     <td className="py-3 px-4 text-sm">
@@ -345,7 +399,7 @@ const ReporteIndicadores = () => {
               ) : (
                 <tr>
                   <td colSpan="13" className="py-4 px-4 text-center text-gray-500">
-                    {loading ? 'Cargando resultados...' : 'No hay resultados disponibles'}
+                    {loading ? 'Cargando resultados...' : filtroAplicado ? 'No hay resultados disponibles' : 'Aplique filtros para ver resultados'}
                   </td>
                 </tr>
               )}

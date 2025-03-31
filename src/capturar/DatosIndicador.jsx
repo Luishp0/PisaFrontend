@@ -27,18 +27,37 @@ const DatosIndicador = forwardRef((props, ref) => {
     minutosFaltantes: 0,
     tipo: '' // 'warning' o 'success'
   });
+// Función corregida para obtener la fecha actual sin problemas de zona horaria
+const obtenerFechaActual = () => {
+  const ahora = new Date();
   
-  // Obtener la fecha actual del sistema en formato YYYY-MM-DD
-  const fechaActual = new Date().toISOString().split('T')[0];
+  // Obtener año, mes y día en la zona horaria local
+  const anio = ahora.getFullYear();
+  const mes = String(ahora.getMonth() + 1).padStart(2, '0'); // +1 porque los meses empiezan en 0
+  const dia = String(ahora.getDate()).padStart(2, '0');
   
-  // Obtener la hora actual y redondear a la media hora más cercana
-  const obtenerHoraMinutoActual = () => {
-    const ahora = new Date();
-    const hora = ahora.getHours();
-    const minuto = ahora.getMinutes() >= 30 ? "30" : "00";
-    return { hora: hora.toString().padStart(2, '0'), minuto };
+  // Formar la fecha en formato YYYY-MM-DD
+  return `${anio}-${mes}-${dia}`;
+};
+
+
+const fechaActual = obtenerFechaActual();
+  
+// Obtener la hora actual y redondear a la media hora más cercana anterior
+const obtenerHoraMinutoActual = () => {
+  const ahora = new Date();
+  const hora = ahora.getHours();
+  const minutoActual = ahora.getMinutes();
+  
+  // Si los minutos son menores a 30, redondear a 00
+  // Si los minutos son mayores o iguales a 30, redondear a 30
+  const minuto = minutoActual < 30 ? "00" : "30";
+  
+  return { 
+    hora: hora.toString().padStart(2, '0'), 
+    minuto 
   };
-  
+};
   const { hora: horaActual, minuto: minutoActual } = obtenerHoraMinutoActual();
   
   // Valores predefinidos de ciclos disponibles (solo 30 y 60)
@@ -180,163 +199,175 @@ const DatosIndicador = forwardRef((props, ref) => {
   // Generar las opciones de minuto (solo 00 y 30)
   const opcionesMinuto = ["00", "30"];
 
-  // Limpiar el formulario después de guardar
-  const limpiarFormulario = () => {
-    // Obtener nuevos valores de hora/minuto actuales
-    const { hora: nuevaHora, minuto: nuevoMinuto } = obtenerHoraMinutoActual();
-    
-    setFormData({
-      piezasProducidas: '',
-      fecha: fechaActual, // Mantener la fecha actual
-      hora: nuevaHora,
-      minuto: nuevoMinuto,
-      ciclo: '60',
-      turno: ''
-    });
-    
-    // También limpiar la comparación de velocidad
-    const nuevaComparacion = {
-      mostrar: false,
-      porcentaje: 0,
-      faltanCapturar: 0,
-      minutosFaltantes: 0,
-      tipo: ''
-    };
-    
-    setLocalComparacionVelocidad(nuevaComparacion);
-    actualizarComparacionVelocidad(nuevaComparacion);
-    
-    // Limpiar los datos temporales del contexto
-    actualizarPiezasTemp(null, null);
+// Limpiar el formulario después de guardar
+const limpiarFormulario = () => {
+  // Obtener la fecha actual actualizada del sistema
+  const fechaActualActualizada = obtenerFechaActual();
+  
+  // Obtener nuevos valores de hora/minuto actuales redondeados
+  const { hora: nuevaHora, minuto: nuevoMinuto } = obtenerHoraMinutoActual();
+  
+  setFormData({
+    piezasProducidas: '',
+    fecha: fechaActualActualizada, // Usar la fecha actual actualizada
+    hora: nuevaHora,
+    minuto: nuevoMinuto,
+    ciclo: '60',
+    turno: ''
+  });
+  
+  // También limpiar la comparación de velocidad
+  const nuevaComparacion = {
+    mostrar: false,
+    porcentaje: 0,
+    faltanCapturar: 0,
+    minutosFaltantes: 0,
+    tipo: ''
   };
+  
+  setLocalComparacionVelocidad(nuevaComparacion);
+  actualizarComparacionVelocidad(nuevaComparacion);
+  
+  // Limpiar los datos temporales del contexto
+  actualizarPiezasTemp(null, null);
+};
 
-  const handleSubmit = async (e) => {
-    if (e) {
-      e.preventDefault();
+const handleSubmit = async (e) => {
+  if (e) {
+    e.preventDefault();
+  }
+  
+  // Verificar que el usuario esté autenticado
+  if (!user || !user._id) {
+    setMensaje({
+      texto: 'Error: No hay un usuario autenticado. Inicie sesión nuevamente.',
+      tipo: 'error'
+    });
+    return;
+  }
+
+  // Verificar que hay un material seleccionado en el contexto
+  if (!materialSeleccionado || !materialSeleccionado.id) {
+    console.log('Material seleccionado en submit:', materialSeleccionado);
+    setMensaje({
+      texto: 'Error: Debe seleccionar un material en la sección de Datos Generales para continuar.',
+      tipo: 'error'
+    });
+    return;
+  }
+  
+  setGuardando(true);
+  setMensaje({ texto: '', tipo: '' });
+
+  try {
+    // Obtener la zona horaria local en minutos
+    const offsetMinutos = new Date().getTimezoneOffset();
+    
+    // Crear la fecha y hora correctamente, considerando la zona horaria
+    const fechaBase = new Date(`${formData.fecha}T${formData.hora}:${formData.minuto}:00`);
+    
+    // Ajustar por la zona horaria para preservar la hora local exacta
+    const fechaHoraAjustada = new Date(fechaBase.getTime() - (offsetMinutos * 60000));
+    
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    
+    // 1. Primero guardar la producción incluyendo el ID del usuario
+    const produccionData = {
+      fechaHora: fechaHoraAjustada.toISOString(), // Usar la fecha ajustada
+      piezasProduccidas: parseInt(formData.piezasProducidas),
+      ciclo: parseInt(formData.ciclo),
+      usuario: user._id,
+      materialId: materialSeleccionado.id,
+      velocidadNominal: materialSeleccionado.velocidadNominal
+    };
+
+    console.log("Enviando datos de producción:", produccionData);
+    console.log("Fecha y hora original:", `${formData.fecha}T${formData.hora}:${formData.minuto}:00`);
+    console.log("Fecha y hora ajustada:", fechaHoraAjustada.toISOString());
+
+    const produccionResponse = await fetch(`${apiUrl}/produccion`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(produccionData)
+    });
+
+    if (!produccionResponse.ok) {
+      const errorData = await produccionResponse.json();
+      throw new Error(errorData.message || `Error al guardar producción: ${produccionResponse.status}`);
     }
     
-    // Verificar que el usuario esté autenticado
-    if (!user || !user._id) {
-      setMensaje({
-        texto: 'Error: No hay un usuario autenticado. Inicie sesión nuevamente.',
-        tipo: 'error'
-      });
-      return;
-    }
-
-    // Verificar que hay un material seleccionado en el contexto
-    if (!materialSeleccionado || !materialSeleccionado.id) {
-      console.log('Material seleccionado en submit:', materialSeleccionado);
-      setMensaje({
-        texto: 'Error: Debe seleccionar un material en la sección de Datos Generales para continuar.',
-        tipo: 'error'
-      });
-      return;
+    const produccionGuardada = await produccionResponse.json();
+    console.log('Producción guardada:', produccionGuardada);
+    
+    // Extraer el ID de producción correctamente según la estructura de respuesta
+    let produccionId;
+    
+    // Verificar la estructura de la respuesta
+    if (produccionGuardada._id) {
+      produccionId = produccionGuardada._id;
+    } else if (produccionGuardada.produccion && produccionGuardada.produccion._id) {
+      produccionId = produccionGuardada.produccion._id;
+    } else {
+      throw new Error('No se pudo obtener el ID de producción');
     }
     
-    setGuardando(true);
-    setMensaje({ texto: '', tipo: '' });
-
-    try {
-      // Formatear la fecha y hora para enviar
-      const fechaHora = new Date(`${formData.fecha}T${formData.hora}:${formData.minuto}:00`);
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      
-      // 1. Primero guardar la producción incluyendo el ID del usuario
-      const produccionData = {
-        fechaHora: fechaHora.toISOString(),
-        piezasProduccidas: parseInt(formData.piezasProducidas),
-        ciclo: parseInt(formData.ciclo),
-        usuario: user._id, // Añadimos el ID del usuario autenticado
-        materialId: materialSeleccionado.id, // ID del material seleccionado desde el contexto
-        velocidadNominal: materialSeleccionado.velocidadNominal // Velocidad nominal del material
+    // Actualizar el contexto con el ID de producción
+    actualizarProduccion(produccionId, produccionGuardada);
+    
+    // 2. Luego guardar el turno con referencia a la producción
+    const turnoSeleccionado = turnos.find(t => t._id === formData.turno);
+    
+    if (turnoSeleccionado && produccionId) {
+      const turnoData = {
+        produccion: produccionId,
+        nombreTurno: turnoSeleccionado.nombreTurnoCatalogo
       };
-
-      console.log("Enviando datos de producción:", produccionData);
-
-      const produccionResponse = await fetch(`${apiUrl}/produccion`, {
+      
+      console.log("Datos de turno a enviar:", turnoData);
+      
+      const turnoResponse = await fetch(`${apiUrl}/turno`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(produccionData)
+        body: JSON.stringify(turnoData),
       });
 
-      if (!produccionResponse.ok) {
-        const errorData = await produccionResponse.json();
-        throw new Error(errorData.message || `Error al guardar producción: ${produccionResponse.status}`);
+      if (!turnoResponse.ok) {
+        const errorData = await turnoResponse.json();
+        throw new Error(errorData.message || `Error al guardar turno: ${turnoResponse.status}`);
       }
       
-      const produccionGuardada = await produccionResponse.json();
-      console.log('Producción guardada:', produccionGuardada);
-      
-      // Extraer el ID de producción correctamente según la estructura de respuesta
-      let produccionId;
-      
-      // Verificar la estructura de la respuesta
-      if (produccionGuardada._id) {
-        produccionId = produccionGuardada._id;
-      } else if (produccionGuardada.produccion && produccionGuardada.produccion._id) {
-        produccionId = produccionGuardada.produccion._id;
-      } else {
-        throw new Error('No se pudo obtener el ID de producción');
-      }
-      
-      // Actualizar el contexto con el ID de producción
-      actualizarProduccion(produccionId, produccionGuardada);
-      
-      // 2. Luego guardar el turno con referencia a la producción
-      const turnoSeleccionado = turnos.find(t => t._id === formData.turno);
-      
-      if (turnoSeleccionado && produccionId) {
-        const turnoData = {
-          produccion: produccionId,
-          nombreTurno: turnoSeleccionado.nombreTurnoCatalogo
-        };
-        
-        console.log("Datos de turno a enviar:", turnoData);
-        
-        const turnoResponse = await fetch(`${apiUrl}/turno`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify(turnoData),
-        });
-
-        if (!turnoResponse.ok) {
-          const errorData = await turnoResponse.json();
-          throw new Error(errorData.message || `Error al guardar turno: ${turnoResponse.status}`);
-        }
-        
-        const turnoGuardado = await turnoResponse.json();
-        console.log("Turno guardado correctamente:", turnoGuardado);
-      } else {
-        throw new Error('No se pudo crear el turno porque falta la referencia a producción o el turno seleccionado');
-      }
-
-      setMensaje({
-        texto: '¡Datos guardados correctamente!',
-        tipo: 'success'
-      });
-      
-      // Limpiar el formulario después de guardar exitosamente
-      limpiarFormulario();
-      
-    } catch (err) {
-      console.error("Error al guardar datos:", err);
-      setMensaje({
-        texto: err.message || 'Error al guardar los datos. Intente nuevamente.',
-        tipo: 'error'
-      });
-      // Si ocurre un error, también debemos reiniciar el proceso
-      actualizarProduccion(null, null);
-    } finally {
-      setGuardando(false);
+      const turnoGuardado = await turnoResponse.json();
+      console.log("Turno guardado correctamente:", turnoGuardado);
+    } else {
+      throw new Error('No se pudo crear el turno porque falta la referencia a producción o el turno seleccionado');
     }
-  };
+
+    setMensaje({
+      texto: '¡Datos guardados correctamente!',
+      tipo: 'success'
+    });
+    
+    // Limpiar el formulario después de guardar exitosamente
+    limpiarFormulario();
+    
+  } catch (err) {
+    console.error("Error al guardar datos:", err);
+    setMensaje({
+      texto: err.message || 'Error al guardar los datos. Intente nuevamente.',
+      tipo: 'error'
+    });
+    // Si ocurre un error, también debemos reiniciar el proceso
+    actualizarProduccion(null, null);
+  } finally {
+    setGuardando(false);
+  }
+};
 
   // Renderizado condicional si no hay usuario autenticado
   if (!user) {
@@ -393,12 +424,13 @@ const DatosIndicador = forwardRef((props, ref) => {
             <label className="w-32 text-gray-700">Fecha</label>
             <div className="relative flex-1">
               <div className="flex items-center border border-gray-300 rounded overflow-hidden">
-                <input
+              <input
                   type="date"
-                  className="flex-1 px-3 py-2 border-none focus:outline-none"
+                  className="flex-1 px-3 py-2 border-none focus:outline-none bg-gray-100" // Añade bg-gray-100 para mostrar que está deshabilitado
                   name="fecha"
                   value={formData.fecha}
                   onChange={handleChange}
+                  readOnly // Añade readOnly para que no se pueda editar
                   required
                 />
               </div>
